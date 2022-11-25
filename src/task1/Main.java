@@ -73,10 +73,12 @@ public class Main {
     public static void main(String[] args) throws IOException {
         // setup
         int m = 10000;
+        long local_work_size = 1;
         long heapsize = Runtime.getRuntime().totalMemory();
         System.out.println("heapsize is :: " + heapsize);
         if(args.length > 0)
             m = Integer.parseInt(args[0]);
+            local_work_size = Long.parseLong(args[1]);
 
         int origin = -10;
         int bound = 11;
@@ -100,7 +102,7 @@ public class Main {
 
         /* ----------------------------------------------------------------------*/
         println("Starting parallel matrix multiplication...");
-        matVec.initParallel(context);
+        matVec.initParallel(context, local_work_size);
         TimeResult parallelResult = time(
                 () -> matVec.readParallel(commandQueue),
                 () -> matVec.parallel(commandQueue));

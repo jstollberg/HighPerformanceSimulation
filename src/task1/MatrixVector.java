@@ -82,8 +82,9 @@ public class MatrixVector {
      * Initialize parallel procedures.
      *
      * @param context   OpenCL Context.
+     * @param lws the local work size
      */
-    public void initParallel(cl_context context)
+    public void initParallel(cl_context context, long lws)
     {
         // create the kernel to run parallel matrix multiplication
         try {
@@ -123,10 +124,9 @@ public class MatrixVector {
         clSetKernelArg(kernel, 3,
                 Sizeof.cl_int, Pointer.to(new int[]{m}));
 
-
         global_work_size = new long[]{m};
-        local_work_size = new long[]{1};
-
+        local_work_size = new long[]{lws};
+        System.out.println("Number of workgroups : " + global_work_size[0]/local_work_size[0]);
 
         parallelInitialized = true;
     }
