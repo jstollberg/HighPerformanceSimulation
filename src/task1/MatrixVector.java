@@ -22,7 +22,7 @@ public class MatrixVector {
 
     int m;
     // left hand side
-    short[][] matrix;
+    short[] matrix;
     // right hand side
     short[] vector;
 
@@ -38,12 +38,12 @@ public class MatrixVector {
         Random rd = new Random();
 
         // fill matrix and vector with random short values
-        short[][] matrix = new short[m][m];
+        short[] matrix = new short[m * m];
         short[] vector = new short[m];
         for (int i = 0; i < m; i++) {
-            vector[i] = (short) (rd.nextInt(bound - origin) + origin);//*rd.nextDouble();
+            vector[i] = (short) (rd.nextInt(bound - origin) + origin);
             for (int j = 0; j < m; j++) {
-                matrix[i][j] = (short) (rd.nextInt(bound - origin) + origin);//*rd.nextDouble();
+                matrix[i * m + j] = (short) (rd.nextInt(bound - origin) + origin);
             }
         }
 
@@ -63,7 +63,7 @@ public class MatrixVector {
         // compute matrix-vector product
         for (int i = 0; i < m; i++) {
             for (int j = 0; j < m; j++) {
-                result[i] += matrix[i][j] * vector[j];
+                result[i] += matrix[i * m + j] * vector[j];//matrix[i][j] * vector[j];
             }
         }
 
@@ -93,20 +93,10 @@ public class MatrixVector {
             throw new RuntimeException("Kernel file was not found!");
         }
 
-        // concatenate values
-        int n = m * m;
-        short[] values = new short[n];
-        for (int i = 0; i < m; i++) {
-            for (int j = 0; j < m; j++) {
-                int id = m * i + j;
-                values[id] = matrix[i][j];
-            }
-        }
-
         memBuffers = new cl_mem[3];
         memBuffers[0] = clCreateBuffer(context,
                 CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-                (long) Sizeof.cl_short * n, Pointer.to(values), null);
+                (long) Sizeof.cl_short * m * m, Pointer.to(matrix), null);
         memBuffers[1] = clCreateBuffer(context,
                 CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
                 (long) Sizeof.cl_short * m, Pointer.to(vector), null);

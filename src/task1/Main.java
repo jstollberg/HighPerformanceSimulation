@@ -1,6 +1,5 @@
 package task1;
 
-
 import static org.jocl.CL.*;
 
 import java.io.IOException;
