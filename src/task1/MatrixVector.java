@@ -61,41 +61,28 @@ public class MatrixVector {
         double [] result = new double[this.m];
 
         // compute matrix-vector product
-        for (int i = 0; i < this.m; i++) {
-            for (int j = 0; j < this.m; j++) {
-                result[i] += this.matrix[i][j]*this.vector[j];
+        for (int i = 0; i < m; i++) {
+            for (int j = 0; j < m; j++) {
+                result[i] += matrix[i][j] * vector[j];
             }
         }
 
         return result;
     }
 
-    /**
-     * Track the execution time of {@link #sequential()}.
-     *
-     * @return the execution time in milliseconds
-     */
-    public double timeSequential() {
-        long start = System.nanoTime();
-        this.sequential();
-        long end = System.nanoTime();
-        return (end - start)/1e6;
-    }
-
     /* ###############################################################*/
     /* #################   PARALLEL PROCEDURES       #################*/
     /* ###############################################################*/
-
 
     private boolean parallelInitialized = false;
     private boolean parallelRun = false;
 
     /**
      * Initialize parallel procedures.
+     *
      * @param context   OpenCL Context.
-     * @param commandQueue OpenCL Command Queue.
      */
-    public void init_parallel(cl_context context, cl_command_queue commandQueue)
+    public void initParallel(cl_context context)
     {
         // create the kernel to run parallel matrix multiplication
         try {
@@ -104,14 +91,13 @@ public class MatrixVector {
             throw new RuntimeException("Kernel file was not found!");
         }
 
-        int n = m*m;
-
         // concatenate values
+        int n = m * m;
         double[] values = new double[n];
-        for (int i = 0; i < this.m; i++) {
-            for (int j = 0; j < this.m; j++) {
-                int id = m*i+j;
-                values[id] = this.matrix[i][j];
+        for (int i = 0; i < m; i++) {
+            for (int j = 0; j < m; j++) {
+                int id = m * i + j;
+                values[id] = matrix[i][j];
             }
         }
 
@@ -141,14 +127,14 @@ public class MatrixVector {
 
     /**
      * Read parallel results from commandQueue.
+     *
      * @param commandQueue  The queue to read from.
      * @return Results in array.
      */
-    public double[] read_parallel(cl_command_queue commandQueue)
+    public double[] readParallel(cl_command_queue commandQueue)
     {
         if(!parallelRun)
             throw new RuntimeException("parallel(commandQueue) must be called before reading results!");
-
 
         // read result into buffer
         double [] result = new double[this.m];
@@ -159,16 +145,13 @@ public class MatrixVector {
 
     /**
      * Execute matrix multiplication in parallel using openCL.
+     *
      * @param commandQueue CommandQueue of the context.
      */
     public void parallel(cl_command_queue commandQueue)
     {
         if(!parallelInitialized)
             throw new RuntimeException("Parallel core must be initialized first using init_parallel()!");
-
-        // full size of buffer
-        int n = m*m;
-        // result buffer
 
         long[] global_work_size = new long[]{m};
         long[] local_work_size = new long[]{1};
@@ -181,22 +164,22 @@ public class MatrixVector {
 
     /**
      * Create kernel for the parallel execution on GPU context.
+     *
      * @param context: The context the kernel should run in.
      * @throws IOException: kernel.cl not found.
      */
     private void createKernel(cl_context context) throws IOException {
-        String kernelSource = Files.readString(Path.of("kernel.cl"));
+        String kernelSource = Files.readString(Path.of("./src/task1/kernel.cl"));
 
-        // Create the program from the source code
+        // create the program from the source code
         program = clCreateProgramWithSource(context,
                 1, new String[]{ kernelSource }, null, null);
 
-        // Build the program
+        // build the program
         clBuildProgram(program, 0, null, null, null, null);
 
-        // Create the kernel
+        // create the kernel
         kernel = clCreateKernel(program, "matrix_vec", null);
     }
-
 
 }
