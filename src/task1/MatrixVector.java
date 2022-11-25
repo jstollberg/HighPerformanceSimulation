@@ -85,7 +85,7 @@ public class MatrixVector {
         // full size of buffer
         int n = m*m;
         // result buffer
-        double [] result = new double[this.m];
+
         // concatenate values
         double[] values = new double[n];
         for (int i = 0; i < this.m; i++) {
@@ -124,10 +124,12 @@ public class MatrixVector {
         long local_work_size[] = new long[]{1};
 
         clEnqueueNDRangeKernel(commandQueue, kernel, 1, null,
-                global_work_size, null, 0, null, null);
+                global_work_size, local_work_size, 0, null, null);
 
+        // read result into buffer
+        double [] result = new double[this.m];
         clEnqueueReadBuffer(commandQueue, memBuffers[2], CL_TRUE, 0,
-                n * Sizeof.cl_double, Pointer.to(result), 0, null, null);
+                m * Sizeof.cl_double, Pointer.to(result), 0, null, null);
 
         return result;
     }

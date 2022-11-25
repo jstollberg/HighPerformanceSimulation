@@ -40,12 +40,14 @@ public class Main {
         println("Compare results:");
         for(int i = 0; i < m; i++)
         {
-            if(parallelResult[i] != sequentialResult[i])
+            if(Math.abs(parallelResult[i] - sequentialResult[i]) > 1e-5)
             {
-                println("Result mismatch! %.2f != %.2f".formatted(parallelResult[i], sequentialResult[i]));
+                println("Results didn't match! %.2f != %.2f".formatted(parallelResult[i], sequentialResult[i]));
+                return;
             }
         }
 
+        println("Results matched. All OK");
 
 
     }
