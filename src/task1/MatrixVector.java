@@ -41,9 +41,9 @@ public class MatrixVector {
         short[][] matrix = new short[m][m];
         short[] vector = new short[m];
         for (int i = 0; i < m; i++) {
-            vector[i] = (short) (rd.nextInt(bound - origin) + origin);//*rd.nextDouble();
+            vector[i] = (short)i; //(short) (rd.nextInt(bound - origin) + origin);//*rd.nextDouble();
             for (int j = 0; j < m; j++) {
-                matrix[i][j] = (short) (rd.nextInt(bound - origin) + origin);//*rd.nextDouble();
+                matrix[i][j] = (short)j;// (rd.nextInt(bound - origin) + origin);//*rd.nextDouble();
             }
         }
 
@@ -76,7 +76,8 @@ public class MatrixVector {
 
     private boolean parallelInitialized = false;
     private boolean parallelRun = false;
-
+    private long[] local_work_size;
+    private long[] global_work_size;
     /**
      * Initialize parallel procedures.
      *
@@ -122,6 +123,11 @@ public class MatrixVector {
         clSetKernelArg(kernel, 3,
                 Sizeof.cl_int, Pointer.to(new int[]{m}));
 
+
+        global_work_size = new long[]{m};
+        local_work_size = new long[]{1};
+
+
         parallelInitialized = true;
     }
 
@@ -152,9 +158,6 @@ public class MatrixVector {
     {
         if(!parallelInitialized)
             throw new RuntimeException("Parallel core must be initialized first using init_parallel()!");
-
-        long[] global_work_size = new long[]{m};
-        long[] local_work_size = new long[]{1};
 
         clEnqueueNDRangeKernel(commandQueue, kernel, 1, null,
                 global_work_size, local_work_size, 0, null, null);

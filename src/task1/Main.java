@@ -73,7 +73,8 @@ public class Main {
     public static void main(String[] args) throws IOException {
         // setup
         int m = 10000;
-
+        long heapsize = Runtime.getRuntime().totalMemory();
+        System.out.println("heapsize is :: " + heapsize);
         if(args.length > 0)
             m = Integer.parseInt(args[0]);
 
