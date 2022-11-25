@@ -79,7 +79,11 @@ public class Main {
         if(args.length > 1) {
             m = Integer.parseInt(args[0]);
             local_work_size = Long.parseLong(args[1]);
+        }else{
+            println("Supply arguments: [matrix size: int] [local_worker_size: long (-1 for null)]");
+            return;
         }
+
 
         int origin = -10;
         int bound = 11;
