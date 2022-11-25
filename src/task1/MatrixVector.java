@@ -107,8 +107,8 @@ public class MatrixVector {
                 CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
                 Sizeof.cl_double * m, Pointer.to(vector), null);
         memBuffers[2] = clCreateBuffer(context,
-                CL_MEM_COPY_HOST_PTR,
-                Sizeof.cl_double * m, Pointer.to(result), null);
+                CL_MEM_READ_WRITE,
+                Sizeof.cl_double * m, null, null);
 
         // specify kernel arguments to be passed into the kernels
         clSetKernelArg(kernel, 0,
@@ -124,7 +124,7 @@ public class MatrixVector {
         long local_work_size[] = new long[]{1};
 
         clEnqueueNDRangeKernel(commandQueue, kernel, 1, null,
-                global_work_size, local_work_size, 0, null, null);
+                global_work_size, null, 0, null, null);
 
         clEnqueueReadBuffer(commandQueue, memBuffers[2], CL_TRUE, 0,
                 n * Sizeof.cl_double, Pointer.to(result), 0, null, null);
