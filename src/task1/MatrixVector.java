@@ -17,6 +17,9 @@ public class MatrixVector {
     private cl_program program;
     private cl_kernel kernel;
 
+    // create memory objects
+    private cl_mem[] memBuffers;
+
     int m;
     // left hand side
     double[][] matrix;
@@ -79,12 +82,29 @@ public class MatrixVector {
         return (end - start)/1e6;
     }
 
+    /* ###############################################################*/
+    /* #################   PARALLEL PROCEDURES       #################*/
+    /* ###############################################################*/
 
-    public double[] parallel(cl_context context, cl_command_queue commandQueue) throws IOException
+
+    private boolean parallelInitialized = false;
+    private boolean parallelRun = false;
+
+    /**
+     * Initialize parallel procedures.
+     * @param context   OpenCL Context.
+     * @param commandQueue OpenCL Command Queue.
+     */
+    public void init_parallel(cl_context context, cl_command_queue commandQueue)
     {
-        // full size of buffer
+        // create the kernel to run parallel matrix multiplication
+        try {
+            createKernel(context);
+        } catch (IOException e) {
+            throw new RuntimeException("Kernel file was not found!");
+        }
+
         int n = m*m;
-        // result buffer
 
         // concatenate values
         double[] values = new double[n];
@@ -95,20 +115,16 @@ public class MatrixVector {
             }
         }
 
-        // create the kernel to run parallel matrix multiplication
-        createKernel(context);
-
-        // create memory objects
-        cl_mem memBuffers[] = new cl_mem[3];
+        memBuffers = new cl_mem[3];
         memBuffers[0] = clCreateBuffer(context,
                 CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-                Sizeof.cl_double * n, Pointer.to(values), null);
+                (long) Sizeof.cl_double * n, Pointer.to(values), null);
         memBuffers[1] = clCreateBuffer(context,
                 CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-                Sizeof.cl_double * m, Pointer.to(vector), null);
+                (long) Sizeof.cl_double * m, Pointer.to(vector), null);
         memBuffers[2] = clCreateBuffer(context,
                 CL_MEM_READ_WRITE,
-                Sizeof.cl_double * m, null, null);
+                (long) Sizeof.cl_double * m, null, null);
 
         // specify kernel arguments to be passed into the kernels
         clSetKernelArg(kernel, 0,
@@ -120,18 +136,47 @@ public class MatrixVector {
         clSetKernelArg(kernel, 3,
                 Sizeof.cl_int, Pointer.to(new int[]{m}));
 
-        long global_work_size[] = new long[]{m};
-        long local_work_size[] = new long[]{1};
+        parallelInitialized = true;
+    }
 
-        clEnqueueNDRangeKernel(commandQueue, kernel, 1, null,
-                global_work_size, local_work_size, 0, null, null);
+    /**
+     * Read parallel results from commandQueue.
+     * @param commandQueue  The queue to read from.
+     * @return Results in array.
+     */
+    public double[] read_parallel(cl_command_queue commandQueue)
+    {
+        if(!parallelRun)
+            throw new RuntimeException("parallel(commandQueue) must be called before reading results!");
+
 
         // read result into buffer
         double [] result = new double[this.m];
         clEnqueueReadBuffer(commandQueue, memBuffers[2], CL_TRUE, 0,
-                m * Sizeof.cl_double, Pointer.to(result), 0, null, null);
-
+                (long) m * Sizeof.cl_double, Pointer.to(result), 0, null, null);
         return result;
+    }
+
+    /**
+     * Execute matrix multiplication in parallel using openCL.
+     * @param commandQueue CommandQueue of the context.
+     */
+    public void parallel(cl_command_queue commandQueue)
+    {
+        if(!parallelInitialized)
+            throw new RuntimeException("Parallel core must be initialized first using init_parallel()!");
+
+        // full size of buffer
+        int n = m*m;
+        // result buffer
+
+        long[] global_work_size = new long[]{m};
+        long[] local_work_size = new long[]{1};
+
+        clEnqueueNDRangeKernel(commandQueue, kernel, 1, null,
+                global_work_size, local_work_size, 0, null, null);
+
+        parallelRun = true;
     }
 
     /**

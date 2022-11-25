@@ -4,29 +4,94 @@ package task1;
 import static org.jocl.CL.*;
 
 import java.io.IOException;
-
 import org.jocl.*;
 
+interface ResultFunction
+{
+    double[] run();
+}
+
+interface ExecuteFunction
+{
+    void run();
+}
+
+class TimeResult
+{
+    double time;
+    double[] result;
+
+    TimeResult(double time, double[] result)
+    {
+        this.time = time;
+        this.result = result;
+    }
+}
+
 public class Main {
+    private final int origin = -100;
+    private final int bound = 100;
+
     private static void println(String message)
     {
         System.out.println(message);
     }
 
+    /**
+     * Use this with a lambda function to time a function call.
+     * @param func: The function to be timed.
+     * @return A result, which contains a double array and the time it took to process.
+     */
+    private static TimeResult Time(ResultFunction func)
+    {
+        long start = System.nanoTime();
+        double[] result = func.run();
+        long end = System.nanoTime();
+        double time =  (end - start)/1e6;
+
+        return new TimeResult(time, result);
+    }
+
+    /**
+     * Time a function call.
+     * @param resultFunc The function to get the results from.
+     * @param timedFunc The function to time.
+     * @return A result containing time of timedFunc and results of resultFunc.
+     */
+    public static TimeResult Time(ResultFunction resultFunc, ExecuteFunction timedFunc)
+    {
+        long start = System.nanoTime();
+        timedFunc.run();
+        long end = System.nanoTime();
+        double time =  (end - start)/1e6;
+
+        return new TimeResult(time, resultFunc.run());
+    }
+
+
 
     public static void main(String[] args) throws IOException {
         // setup
         int m = 100;
+
+        if(args.length > 0)
+            m = Integer.parseInt(args[0]);
+
         int origin = -100;
         int bound = 100;
 
-        // compute matrix vector product
-        MatrixVector matVec = new MatrixVector(m, origin, bound);
         /* ----------------------------------------------------------------------*/
-        double[] sequentialResult = matVec.sequential();
-        double seqTime = matVec.timeSequential();
+        println("Running matrix calculations with:");
+        println("\tm=%d".formatted(m));
 
-        println("Sequential matrix-vector product took " + seqTime + " ms.");
+        MatrixVector matVec = new MatrixVector(m, origin, bound);
+
+
+        /* ----------------------------------------------------------------------*/
+        // sequential calculation
+        println("Starting sequential matrix multiplication...");
+        TimeResult sequentialResult = Time( () -> matVec.sequential());
+        println("\t> Took " + sequentialResult.time + " ms.");
 
         /* ----------------------------------------------------------------------*/
         println("Starting OpenCL Initialization...");
@@ -34,15 +99,19 @@ public class Main {
 
         /* ----------------------------------------------------------------------*/
         println("Starting parallel matrix multiplication...");
-        double[] parallelResult = matVec.parallel(context, commandQueue);
+        matVec.init_parallel(context, commandQueue);
+        TimeResult parallelResult = Time(
+                () -> matVec.read_parallel(commandQueue),
+                () -> matVec.parallel(commandQueue));
+        println("\t> Took " + parallelResult.time + " ms.");
 
         /* ----------------------------------------------------------------------*/
         println("Compare results:");
         for(int i = 0; i < m; i++)
         {
-            if(Math.abs(parallelResult[i] - sequentialResult[i]) > 1e-5)
+            if(Math.abs(parallelResult.result[i] - sequentialResult.result[i]) > 1e-5)
             {
-                println("Results didn't match! %.2f != %.2f".formatted(parallelResult[i], sequentialResult[i]));
+                println("Results didn't match! %.2f != %.2f".formatted(parallelResult.result[i], sequentialResult.result[i]));
                 return;
             }
         }
