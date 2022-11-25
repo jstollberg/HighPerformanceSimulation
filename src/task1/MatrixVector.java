@@ -125,8 +125,10 @@ public class MatrixVector {
                 Sizeof.cl_int, Pointer.to(new int[]{m}));
 
         global_work_size = new long[]{m};
-        local_work_size = new long[]{lws};
-        System.out.println("Number of workgroups : " + global_work_size[0]/local_work_size[0]);
+        if(lws != -1)
+            local_work_size = new long[]{lws};
+        else
+            local_work_size = null;
 
         parallelInitialized = true;
     }
@@ -160,7 +162,7 @@ public class MatrixVector {
             throw new RuntimeException("Parallel core must be initialized first using init_parallel()!");
 
         clEnqueueNDRangeKernel(commandQueue, kernel, 1, null,
-                global_work_size, local_work_size, 0, null, null);
+                global_work_size, null, 0, null, null);
 
         parallelRun = true;
     }

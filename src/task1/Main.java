@@ -76,9 +76,10 @@ public class Main {
         long local_work_size = 1;
         long heapsize = Runtime.getRuntime().totalMemory();
         System.out.println("heapsize is :: " + heapsize);
-        if(args.length > 0)
+        if(args.length > 1) {
             m = Integer.parseInt(args[0]);
             local_work_size = Long.parseLong(args[1]);
+        }
 
         int origin = -10;
         int bound = 11;
@@ -86,13 +87,17 @@ public class Main {
         /* ----------------------------------------------------------------------*/
         println("Running matrix calculations with:");
         println("\tm=%d".formatted(m));
+        println("\tlocal_work_size=%d".formatted(local_work_size));
+        println("\tWork-groups=%d".formatted(m/local_work_size));
+        println("");
+        println("");
 
         MatrixVector matVec = new MatrixVector(m, origin, bound);
 
 
         /* ----------------------------------------------------------------------*/
         // sequential calculation
-        println("Starting sequential matrix multiplication...");
+        println("Running sequential matrix multiplication...");
         TimeResult sequentialResult = time(matVec::sequential);
         println("\t> Took " + sequentialResult.time + " ms.");
 
@@ -101,8 +106,9 @@ public class Main {
         clInit();
 
         /* ----------------------------------------------------------------------*/
-        println("Starting parallel matrix multiplication...");
+        println("Initializing parallel matrix multiplication...");
         matVec.initParallel(context, local_work_size);
+        println("Running parallel matrix multiplication...");
         TimeResult parallelResult = time(
                 () -> matVec.readParallel(commandQueue),
                 () -> matVec.parallel(commandQueue));
