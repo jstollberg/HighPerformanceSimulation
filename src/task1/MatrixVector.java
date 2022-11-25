@@ -169,7 +169,7 @@ public class MatrixVector {
      * @throws IOException: kernel.cl not found.
      */
     private void createKernel(cl_context context) throws IOException {
-        String kernelSource = Files.readString(Path.of("./src/task1/kernel.cl"));
+        String kernelSource = Files.readString(Path.of("kernel.cl"));
 
         // create the program from the source code
         program = clCreateProgramWithSource(context,
