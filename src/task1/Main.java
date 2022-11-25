@@ -16,12 +16,17 @@ interface ExecuteFunction
     void run();
 }
 
-class TimeResult
+interface ResultAnyFunction<T>
+{
+    T run();
+}
+
+class TimeResult<T>
 {
     double time;
-    short[] result;
+    T result;
 
-    TimeResult(double time, short[] result)
+    TimeResult(double time, T result)
     {
         this.time = time;
         this.result = result;
@@ -68,7 +73,21 @@ public class Main {
         return new TimeResult(time, resultFunc.run());
     }
 
+    /**
+     * Time a function call.
+     *
+     * @param resultFunc The function to get the results from.
+     * @return A result containing time of timedFunc and results of resultFunc.
+     */
+    public static TimeResult time(ResultAnyFunction resultFunc)
+    {
+        long start = System.nanoTime();
+        resultFunc.run();
+        long end = System.nanoTime();
+        double time =  (end - start)/1e6;
 
+        return new TimeResult(time, resultFunc.run());
+    }
 
     public static void main(String[] args) throws IOException {
         // setup
@@ -96,13 +115,18 @@ public class Main {
         println("");
         println("");
 
-        MatrixVector matVec = new MatrixVector(m, origin, bound);
+        final int mm = m;
+        println("Create matrix-vector structure...");
+        TimeResult<MatrixVector> creation = time( () -> new MatrixVector(mm, origin, bound));
+        println("\t> Took " + creation.time + " ms.");
+
+        MatrixVector matVec = creation.result;
 
 
         /* ----------------------------------------------------------------------*/
         // sequential calculation
         println("Running sequential matrix multiplication...");
-        TimeResult sequentialResult = time(matVec::sequential);
+        TimeResult<short[]> sequentialResult = time(matVec::sequential);
         println("\t> Took " + sequentialResult.time + " ms.");
 
         /* ----------------------------------------------------------------------*/
@@ -112,27 +136,37 @@ public class Main {
         /* ----------------------------------------------------------------------*/
         println("Initializing parallel matrix multiplication...");
         matVec.initParallel(context, local_work_size);
-        println("Running parallel matrix multiplication...");
-        TimeResult parallelResult = time(
-                () -> matVec.readParallel(commandQueue),
-                () -> matVec.parallel(commandQueue));
-        println("\t> Took " + parallelResult.time + " ms.");
-
-        /* ----------------------------------------------------------------------*/
-        println("Compare results:");
-        for(int i = 0; i < m; i++)
+        // warmup to load kernel onto gpu
+        println("Running warmup...");
+        matVec.parallel(commandQueue);
+        matVec.parallel(commandQueue);
+        // time imax times
+        int imax = 5;
+        for(int i = 0; i < imax; i++)
         {
-            if(Math.abs(parallelResult.result[i] - sequentialResult.result[i]) > 1e-5)
-            {
-                println("Results didn't match! %d != %d".formatted(parallelResult.result[i], sequentialResult.result[i]));
-                return;
-            }
-        }
+            println("Running parallel (%d of %d)...".formatted(i+1, imax));
+            TimeResult<short[]> parallelResult = time(
+                    () -> matVec.readParallel(commandQueue),
+                    () -> matVec.parallel(commandQueue));
+            println("\t> Took " + parallelResult.time + " ms.");
 
-        println("Results matched. All OK");
+            if (!areResultsEqual(m, sequentialResult.result, parallelResult.result)) return;
+        }
 
     }
 
+    private static boolean areResultsEqual(int m, short[] sequential, short[] parallel) {
+        for(int i = 0; i < m; i++)
+        {
+            if(Math.abs(sequential[i] - parallel[i]) > 1e-5)
+            {
+                println("\t> Results didn't match! %d != %d".formatted(sequential[i], parallel[i]));
+                return false;
+            }
+        }
+        println("\t> Results match!");
+        return true;
+    }
 
 
     private static cl_context context;
