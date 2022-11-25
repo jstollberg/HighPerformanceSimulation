@@ -138,6 +138,10 @@ public class MatrixVector {
         short [] result = new short[this.m];
         clEnqueueReadBuffer(commandQueue, memBuffers[2], CL_TRUE, 0,
                 (long) m * Sizeof.cl_short, Pointer.to(result), 0, null, null);
+
+        // wait for commandqueue to finish
+        clFinish(commandQueue);
+
         return result;
     }
 
@@ -153,6 +157,9 @@ public class MatrixVector {
 
         clEnqueueNDRangeKernel(commandQueue, kernel, 1, null,
                 global_work_size, null, 0, null, null);
+
+        // wait for commandqueue to finish
+        clFinish(commandQueue);
 
         parallelRun = true;
     }
