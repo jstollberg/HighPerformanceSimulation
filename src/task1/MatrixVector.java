@@ -22,9 +22,9 @@ public class MatrixVector {
 
     int m;
     // left hand side
-    double[][] matrix;
+    short[][] matrix;
     // right hand side
-    double[] vector;
+    short[] vector;
 
     /**
      * Create a new matrix and vector filled with random numbers between the specified values.
@@ -37,13 +37,13 @@ public class MatrixVector {
         // random number generator
         Random rd = new Random();
 
-        // fill matrix and vector with random double values
-        double[][] matrix = new double[m][m];
-        double[] vector = new double[m];
+        // fill matrix and vector with random short values
+        short[][] matrix = new short[m][m];
+        short[] vector = new short[m];
         for (int i = 0; i < m; i++) {
-            vector[i] = (rd.nextInt(bound - origin) + origin)*rd.nextDouble();
+            vector[i] = (short) (rd.nextInt(bound - origin) + origin);//*rd.nextDouble();
             for (int j = 0; j < m; j++) {
-                matrix[i][j] = (rd.nextInt(bound - origin) + origin)*rd.nextDouble();
+                matrix[i][j] = (short) (rd.nextInt(bound - origin) + origin);//*rd.nextDouble();
             }
         }
 
@@ -57,8 +57,8 @@ public class MatrixVector {
      *
      * @return the matrix-vector product
      */
-    public double[] sequential() {
-        double [] result = new double[this.m];
+    public short[] sequential() {
+        short [] result = new short[this.m];
 
         // compute matrix-vector product
         for (int i = 0; i < m; i++) {
@@ -93,7 +93,7 @@ public class MatrixVector {
 
         // concatenate values
         int n = m * m;
-        double[] values = new double[n];
+        short[] values = new short[n];
         for (int i = 0; i < m; i++) {
             for (int j = 0; j < m; j++) {
                 int id = m * i + j;
@@ -104,13 +104,13 @@ public class MatrixVector {
         memBuffers = new cl_mem[3];
         memBuffers[0] = clCreateBuffer(context,
                 CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-                (long) Sizeof.cl_double * n, Pointer.to(values), null);
+                (long) Sizeof.cl_short * n, Pointer.to(values), null);
         memBuffers[1] = clCreateBuffer(context,
                 CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-                (long) Sizeof.cl_double * m, Pointer.to(vector), null);
+                (long) Sizeof.cl_short * m, Pointer.to(vector), null);
         memBuffers[2] = clCreateBuffer(context,
                 CL_MEM_READ_WRITE,
-                (long) Sizeof.cl_double * m, null, null);
+                (long) Sizeof.cl_short * m, null, null);
 
         // specify kernel arguments to be passed into the kernels
         clSetKernelArg(kernel, 0,
@@ -131,15 +131,15 @@ public class MatrixVector {
      * @param commandQueue  The queue to read from.
      * @return Results in array.
      */
-    public double[] readParallel(cl_command_queue commandQueue)
+    public short[] readParallel(cl_command_queue commandQueue)
     {
         if(!parallelRun)
             throw new RuntimeException("parallel(commandQueue) must be called before reading results!");
 
         // read result into buffer
-        double [] result = new double[this.m];
+        short [] result = new short[this.m];
         clEnqueueReadBuffer(commandQueue, memBuffers[2], CL_TRUE, 0,
-                (long) m * Sizeof.cl_double, Pointer.to(result), 0, null, null);
+                (long) m * Sizeof.cl_short, Pointer.to(result), 0, null, null);
         return result;
     }
 

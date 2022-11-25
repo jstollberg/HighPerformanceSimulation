@@ -8,7 +8,7 @@ import org.jocl.*;
 
 interface ResultFunction
 {
-    double[] run();
+    short[] run();
 }
 
 interface ExecuteFunction
@@ -19,9 +19,9 @@ interface ExecuteFunction
 class TimeResult
 {
     double time;
-    double[] result;
+    short[] result;
 
-    TimeResult(double time, double[] result)
+    TimeResult(double time, short[] result)
     {
         this.time = time;
         this.result = result;
@@ -39,12 +39,12 @@ public class Main {
      * Use this with a lambda function to time a function call.
      *
      * @param func: The function to be timed.
-     * @return A result, which contains a double array and the time it took to process.
+     * @return A result, which contains a short array and the time it took to process.
      */
     private static TimeResult time(ResultFunction func)
     {
         long start = System.nanoTime();
-        double[] result = func.run();
+        short[] result = func.run();
         long end = System.nanoTime();
         double time =  (end - start)/1e6;
 
@@ -77,8 +77,8 @@ public class Main {
         if(args.length > 0)
             m = Integer.parseInt(args[0]);
 
-        int origin = -100;
-        int bound = 101;
+        int origin = -10;
+        int bound = 11;
 
         /* ----------------------------------------------------------------------*/
         println("Running matrix calculations with:");
@@ -111,7 +111,7 @@ public class Main {
         {
             if(Math.abs(parallelResult.result[i] - sequentialResult.result[i]) > 1e-5)
             {
-                println("Results didn't match! %.2f != %.2f".formatted(parallelResult.result[i], sequentialResult.result[i]));
+                println("Results didn't match! %d != %d".formatted(parallelResult.result[i], sequentialResult.result[i]));
                 return;
             }
         }
