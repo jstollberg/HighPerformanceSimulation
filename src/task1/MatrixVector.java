@@ -41,9 +41,9 @@ public class MatrixVector {
         short[][] matrix = new short[m][m];
         short[] vector = new short[m];
         for (int i = 0; i < m; i++) {
-            vector[i] = (short)i; //(short) (rd.nextInt(bound - origin) + origin);//*rd.nextDouble();
+            vector[i] = (short) (rd.nextInt(bound - origin) + origin);//*rd.nextDouble();
             for (int j = 0; j < m; j++) {
-                matrix[i][j] = (short)j;// (rd.nextInt(bound - origin) + origin);//*rd.nextDouble();
+                matrix[i][j] = (short) (rd.nextInt(bound - origin) + origin);//*rd.nextDouble();
             }
         }
 
