@@ -38,7 +38,7 @@ class TimedResults {
      */
     public double getAvgParallelTime()
     {
-        return Arrays.stream(presults).parallel().average().orElse(0);
+        return Arrays.stream(presults).skip(1).parallel().average().orElse(0);
     }
 
     TimedResults(double[][] results, int m, long lws)
