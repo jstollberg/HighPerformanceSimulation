@@ -4,6 +4,7 @@ import org.jocl.*;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
@@ -26,7 +27,7 @@ public class OpenCL {
     public static cl_command_queue commandQueue;
     public static cl_program program;
     public static cl_kernel kernel;
-
+    public static cl_device_id device;
     /**
      * Return the device name of a cl_device_id.
      */
@@ -60,6 +61,37 @@ public class OpenCL {
         // create a string from the buffer (excluding the trailing \0 byte)
         return bbuffer.getInt();
     }
+
+    private static String[] getSizes(cl_device_id device, int paramName, int numValues) {
+        // The size of the returned data has to depend on
+        // the size of a size_t, which is handled here
+        ByteBuffer buffer = ByteBuffer.allocate(numValues * Sizeof.size_t).order(ByteOrder.nativeOrder());
+        clGetDeviceInfo(device, paramName, (long) Sizeof.size_t * numValues, Pointer.to(buffer), null);
+        String[] values = new String[numValues];
+        if (Sizeof.size_t == 4) {
+            for (int i = 0; i < numValues; i++) {
+                values[i] = String.valueOf(buffer.getInt(i * Sizeof.size_t));
+            }
+        } else {
+            for (int i = 0; i < numValues; i++) {
+                values[i] = String.valueOf(buffer.getLong(i * Sizeof.size_t));
+            }
+        }
+        return values;
+    }
+
+    /**
+     * Return a device parameter of type cl_uint or cl_int.
+     * @param device
+     * @param paramName
+     * @return
+     */
+    private static int getDeviceUint(cl_device_id device, int paramName) {
+        int[] value = new int[1];
+        clGetDeviceInfo(device, paramName, Sizeof.cl_uint, Pointer.to(value), null);
+        return value[0];
+    }
+
 
     /**
      * Initialize jocl procedures.
@@ -96,7 +128,7 @@ public class OpenCL {
         // obtain a device ID
         cl_device_id[] devices = new cl_device_id[numDevices];
         clGetDeviceIDs(platform, deviceType, numDevices, devices, null);
-        cl_device_id device = devices[deviceIndex];
+        device = devices[deviceIndex];
 
         // create a context for the selected device
         context = clCreateContext(
@@ -153,5 +185,20 @@ public class OpenCL {
         kernel = clCreateKernel(program, name, null);
 
         _hasKernel = true;
+    }
+
+    public static void summary()
+    {
+        String deviceName = getDeviceName(device);
+        System.out.printf("CL_DEVICE_NAME: %s\n", deviceName);
+        String maxWorkGroupSize = String.valueOf(getDeviceMaxWorkGroupSize(device));
+        System.out.printf("CL_DEVICE_MAX_WORK_GROUP_SIZE: %s\n", maxWorkGroupSize);
+
+        var maxDim = getDeviceUint(device, CL_DEVICE_MAX_WORK_ITEM_DIMENSIONS);
+        System.out.printf("CL_DEVICE_MAX_WORK_ITEM_DIMENSIONS: %d\n", maxDim);
+
+        String maxWorkItemSizes = "x: %s, y: %s, z: %s".formatted((Object[]) getSizes(device, CL_DEVICE_MAX_WORK_ITEM_SIZES, maxDim));
+        System.out.printf("CL_DEVICE_MAX_WORK_ITEM_SIZES: %s\n", maxWorkItemSizes);
+
     }
 }

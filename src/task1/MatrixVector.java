@@ -129,14 +129,18 @@ public class MatrixVector {
             long div = 1;
 
             if(m % lws != 0){
-                div = Math.toIntExact(m / lws);
+                div = (int)Math.ceil((double)m / (double)lws);
                 System.out.printf("Local Work Size (%d) has been modified: %d%n", lws, lws*div);
             }
 
             local_work_size = new long[]{lws*div};
+            // this has to be done in case the supplied work size is bigger than global work size
+            local_work_size[0] = Math.min(local_work_size[0], global_work_size[0]);
         }
         else
             local_work_size = null;
+
+
 
         parallelInitialized = true;
     }
