@@ -3,6 +3,7 @@
     <option name="ALTERNATIVE_JRE_PATH" value="openjdk-19" />
     <option name="MAIN_CLASS_NAME" value="task1.Main" />
     <module name="HighPerformanceSimulation" />
+    <option name="PROGRAM_PARAMETERS" value="colored" />
     <option name="VM_PARAMETERS" value="-Xms8g" />
     <option name="WORKING_DIRECTORY" value="$ProjectFileDir$/out/production/HighPerformanceSimulation/task1" />
     <method v="2">

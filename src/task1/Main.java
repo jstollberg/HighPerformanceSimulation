@@ -108,6 +108,8 @@ class TestResult
 
 public class Main {
     private static boolean disableOutput = false;
+    private static boolean activateColors = false;
+
     private static void println(String message)
     {
         if(!disableOutput)
@@ -135,6 +137,10 @@ public class Main {
 
             OpenCL.release();
             return;
+        }else if(args.length == 1)
+        {
+            if(args[0].equals("colored"))
+                activateColors = true;
         }
 
         /* ----------------------------------------------------------------------*/
@@ -271,19 +277,31 @@ public class Main {
     /* ###############################################################*/
     private static String red(String input)
     {
-        return "\u001B[31m" + input + "\u001B[0m";
+        if(activateColors)
+            return "\u001B[31m" + input + "\u001B[0m";
+
+        return input;
     }
     private static String green(String input)
     {
-        return "\u001B[32m" + input + "\u001B[0m";
+        if(activateColors)
+            return "\u001B[32m" + input + "\u001B[0m";
+
+        return input;
     }
     private static String yellow(String input)
     {
-        return "\u001B[33m" + input + "\u001B[0m";
+        if(activateColors)
+            return "\u001B[33m" + input + "\u001B[0m";
+
+        return input;
     }
     private static String gray(String input)
     {
-        return "\u001B[90m" + input + "\u001B[0m";
+        if(activateColors)
+            return "\u001B[90m" + input + "\u001B[0m";
+
+        return input;
     }
     private static String[] toArray(long[] longs)
     {
