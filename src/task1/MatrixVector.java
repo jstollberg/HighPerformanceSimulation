@@ -4,8 +4,13 @@ import org.jocl.Pointer;
 import org.jocl.Sizeof;
 import org.jocl.cl_mem;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Random;
+import java.util.stream.Collectors;
 
 import static org.jocl.CL.*;
 
@@ -96,8 +101,29 @@ public class MatrixVector {
             throw new RuntimeException("Initialize OpenCL first!");
 
         // create the kernel to run parallel matrix multiplication
+        // use file if it is present
+        // if file not present maybe in jar file?
         try {
-            OpenCL.createKernel("matrix_vec");
+            var kernelName = "matrix_vec";
+            var kernelFile = "%s.cl".formatted(kernelName);
+            var filePath = Path.of(kernelFile);
+
+            if(Files.exists(filePath))
+                OpenCL.createKernel(Files.readString(filePath), kernelName);
+            else
+            {
+                // try jar resource file
+                try (var inputStream = this.getClass().getClassLoader().getResourceAsStream(kernelFile)) {
+                    var result = new BufferedReader(new InputStreamReader(inputStream))
+                            .lines().parallel().collect(Collectors.joining("\r\n"));
+                    OpenCL.createKernel(result, kernelName);
+                }
+            }
+
+
+
+
+
         } catch (IOException e) {
             throw new RuntimeException("Kernel file was not found!");
         }

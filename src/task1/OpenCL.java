@@ -2,11 +2,8 @@ package task1;
 
 import org.jocl.*;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.nio.file.Files;
-import java.nio.file.Path;
 
 import static org.jocl.CL.*;
 
@@ -165,11 +162,10 @@ public class OpenCL {
     /**
      * Create kernel for the parallel execution on GPU context.
      *
-     * @param name: The name of the kernel (file and kernel name).
-     * @throws IOException : matrix_vec.cl not found.
+     * @param kernelname: Name of the kernel
+     * @param kernelSource : Source code of kernel
      */
-    public static void createKernel(String name/*, int m*/) throws IOException {
-        String kernelSource = Files.readString(Path.of("%s.cl".formatted(name)));
+    public static void createKernel(String kernelSource, String kernelname/*, int m*/) {
 
         // use this in addition to a #define in the kernel
         //kernelSource = kernelSource.replace("{m}", "%d".formatted(m));
@@ -182,7 +178,7 @@ public class OpenCL {
         clBuildProgram(program, 0, null, null, null, null);
 
         // create the kernel
-        kernel = clCreateKernel(program, name, null);
+        kernel = clCreateKernel(program, kernelname, null);
 
         _hasKernel = true;
     }

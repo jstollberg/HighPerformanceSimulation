@@ -144,8 +144,8 @@ public class Main {
 
         println("RUNNING TEST SUITE...");
 
-        int[] matrix_sizes = new int[]{10,1000,2000,4000,8000,15000};
-        long[] local_work_sizes = new long[]{1,2,5,10,20,30,50,80,100,500,-1};
+        int[] matrix_sizes = new int[]{10,1000,2000,4000,8000,15000,40000};
+        long[] local_work_sizes = new long[]{1,2,5,10,20,50,1000,-1};
 
         /* ----------------------------------------------------------------------*/
         println("Starting OpenCL Initialization...");
