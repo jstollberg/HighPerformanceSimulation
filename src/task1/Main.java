@@ -164,7 +164,7 @@ public class Main {
 
                 avgs[j] = ("%11.2f"+gray(" (%d)")).formatted(pavgs[i][j], result.local_work_size);
             }
-            line = line + "%21s".repeat(workSizes.length).formatted((Object[]) avgs);
+            line = line + "%30s".repeat(workSizes.length).formatted((Object[]) avgs);
             println(line);
         }
     }
