@@ -91,8 +91,13 @@ public class Main {
             return;
         }
         println("RUNNING TEST SUITE...");
+<<<<<<< HEAD
 
         int[] matrix_sizes = new int[]{10,1000,2000,4000,8000,15000};
+=======
+        int[] matrix_sizes = new int[]{10,1000,2000,4000,8000,15000};
+        // int[] matrix_sizes = new int[]{500,5000,10000, 20000, 40000};
+>>>>>>> dev-test-suite
         long[] local_work_sizes = new long[]{1,2,5,10,20,50,-1};
 
         /* ----------------------------------------------------------------------*/
