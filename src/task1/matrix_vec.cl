@@ -1,6 +1,10 @@
 // uncomment pragma and printf to show debug information
 //#pragma OPENCL EXTENSION cl_intel_printf : enable
 
+// may use define to use constant values
+// #define m {m}
+
+
 __kernel void matrix_vec(__global short *lhs, __global short *rhs, __global short *result, const int d) {
     int gid = get_global_id(0);
     int size = d;
