@@ -22,6 +22,7 @@ public class MatrixVector {
     // right hand side
     short[] vector;
 
+    short[] solution;
     /**
      * Create a new matrix and vector filled with random numbers between the specified values.
      *
@@ -54,16 +55,16 @@ public class MatrixVector {
      * @return the matrix-vector product
      */
     public short[] sequential() {
-        short [] result = new short[this.m];
+        solution = new short[this.m];
 
         // compute matrix-vector product
         for (int i = 0; i < m; i++) {
             for (int j = 0; j < m; j++) {
-                result[i] += matrix[i * m + j] * vector[j];//matrix[i][j] * vector[j];
+                solution[i] += matrix[i * m + j] * vector[j];//matrix[i][j] * vector[j];
             }
         }
 
-        return result;
+        return solution;
     }
 
     /* ###############################################################*/
@@ -74,6 +75,16 @@ public class MatrixVector {
     private boolean parallelRun = false;
     private long[] local_work_size;
     private long[] global_work_size;
+
+    /**
+     * Get the actual local_work_size. During setup it may have changed!
+     */
+    public long getLocalWorkSize(){
+        if(local_work_size != null)
+            return local_work_size[0];
+        return -1;
+    }
+
     /**
      * Initialize parallel procedures.
      *
@@ -114,8 +125,16 @@ public class MatrixVector {
                 Sizeof.cl_int, Pointer.to(ms));
 
         global_work_size = new long[]{m};
-        if(lws != -1)
-            local_work_size = new long[]{lws};
+        if(lws != -1) {
+            long div = 1;
+
+            if(m % lws != 0){
+                div = Math.toIntExact(m / lws);
+                System.out.printf("Local Work Size (%d) has been modified: %d%n", lws, lws*div);
+            }
+
+            local_work_size = new long[]{lws*div};
+        }
         else
             local_work_size = null;
 

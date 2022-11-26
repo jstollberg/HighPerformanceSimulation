@@ -3,6 +3,7 @@ package task1;
 import org.jocl.*;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
@@ -26,6 +27,9 @@ public class OpenCL {
     public static cl_program program;
     public static cl_kernel kernel;
 
+    /**
+     * Return the device name of a cl_device_id.
+     */
     private static String getDeviceName(cl_device_id device)
     {
         // obtain the length of the string that will be queried
@@ -40,6 +44,26 @@ public class OpenCL {
         return new String(buffer, 0, buffer.length-1);
     }
 
+    private static int getDeviceMaxWorkGroupSize(cl_device_id device)
+    {
+        // obtain the length of the string that will be queried
+        long[] size = new long[1];
+        clGetDeviceInfo(device, CL_DEVICE_MAX_WORK_GROUP_SIZE, 0, null, size);
+
+        // create a buffer of the appropriate size and fill it with the info
+        byte[] buffer = new byte[(int)size[0]];
+        clGetDeviceInfo(device, CL_DEVICE_MAX_WORK_GROUP_SIZE, buffer.length, Pointer.to(buffer), null);
+
+        var bbuffer = ByteBuffer.allocate(Long.BYTES);
+        bbuffer.put(buffer);
+        bbuffer.flip();
+        // create a string from the buffer (excluding the trailing \0 byte)
+        return bbuffer.getInt();
+    }
+
+    /**
+     * Initialize jocl procedures.
+     */
     public static void init()
     {
         // the platform, device type and device number that will be used
@@ -81,6 +105,8 @@ public class OpenCL {
 
         String deviceName = getDeviceName(devices[0]);
         System.out.printf("CL_DEVICE_NAME: %s\n", deviceName);
+        String maxWorkGroupSize = String.valueOf(getDeviceMaxWorkGroupSize(devices[0]));
+        System.out.printf("CL_DEVICE_MAX_WORK_GROUP_SIZE: %s\n", maxWorkGroupSize);
 
         // create a command-queue for the selected device
         cl_queue_properties properties = new cl_queue_properties();
@@ -90,12 +116,18 @@ public class OpenCL {
         _initialized = true;
     }
 
+    /**
+     * Releases all data from opencl handles and buffers. After this, OpenCL can not be used!
+     */
     public static void release()
     {
         clReleaseKernel(kernel);
         clReleaseProgram(program);
         clReleaseCommandQueue(commandQueue);
         clReleaseContext(context);
+
+        _initialized = false;
+        _hasKernel = false;
     }
 
     /**
