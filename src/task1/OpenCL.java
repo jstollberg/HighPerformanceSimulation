@@ -82,9 +82,9 @@ public class OpenCL {
 
     /**
      * Return a device parameter of type cl_uint or cl_int.
-     * @param device
-     * @param paramName
-     * @return
+     * @param device The device id.
+     * @param paramName Param.
+     * @return Integer valued param.
      */
     private static int getDeviceUint(cl_device_id device, int paramName) {
         int[] value = new int[1];
@@ -189,16 +189,23 @@ public class OpenCL {
 
     public static void summary()
     {
+        Main.header("OPENCL SUMMARY");
+
         String deviceName = getDeviceName(device);
-        System.out.printf("CL_DEVICE_NAME: %s\n", deviceName);
+        System.out.printf("%35s%30s%n", "CL_DEVICE_NAME", deviceName);
+
         String maxWorkGroupSize = String.valueOf(getDeviceMaxWorkGroupSize(device));
-        System.out.printf("CL_DEVICE_MAX_WORK_GROUP_SIZE: %s\n", maxWorkGroupSize);
+        System.out.printf("%35s%30s%n", "CL_DEVICE_MAX_WORK_GROUP_SIZE", maxWorkGroupSize);
 
         var maxDim = getDeviceUint(device, CL_DEVICE_MAX_WORK_ITEM_DIMENSIONS);
-        System.out.printf("CL_DEVICE_MAX_WORK_ITEM_DIMENSIONS: %d\n", maxDim);
+        System.out.printf("%35s%30d%n", "CL_DEVICE_MAX_WORK_ITEM_DIMENSIONS", maxDim);
 
-        String maxWorkItemSizes = "x: %s, y: %s, z: %s".formatted((Object[]) getSizes(device, CL_DEVICE_MAX_WORK_ITEM_SIZES, maxDim));
-        System.out.printf("CL_DEVICE_MAX_WORK_ITEM_SIZES: %s\n", maxWorkItemSizes);
+        String maxWorkItemSizes = "%s, %s, %s".formatted((Object[]) getSizes(device, CL_DEVICE_MAX_WORK_ITEM_SIZES, maxDim));
+        System.out.printf("%35s%30s%n", "CL_DEVICE_MAX_WORK_ITEM_SIZES", maxWorkItemSizes);
+
+        var maxComputeUnits  = getDeviceUint(device, CL_DEVICE_MAX_COMPUTE_UNITS);
+        System.out.printf("%35s%30d%n", "CL_DEVICE_MAX_COMPUTE_UNITS", maxComputeUnits);
+
 
     }
 }

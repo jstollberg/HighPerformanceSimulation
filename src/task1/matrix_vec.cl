@@ -5,7 +5,7 @@
 // #define m {m}
 
 
-__kernel void matrix_vec(__global short *lhs, __global short *rhs, __global short *result, const int d) {
+__kernel void matrix_vec(__global const short *lhs, __global const short *rhs, __global short *result, const int d) {
     int gid = get_global_id(0);
     int size = d;
     result[gid] = 0;

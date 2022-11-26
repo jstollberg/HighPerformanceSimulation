@@ -124,16 +124,12 @@ public class MatrixVector {
         clSetKernelArg(OpenCL.kernel, 3,
                 Sizeof.cl_int, Pointer.to(ms));
 
+        // global work size is just the size of the matrix
         global_work_size = new long[]{m};
+
+        // lws = -1 -> automatic local_work_size
         if(lws != -1) {
-            long div = 1;
-
-            if(m % lws != 0){
-                div = (int)Math.ceil((double)m / (double)lws);
-                System.out.printf("Local Work Size (%d) has been modified: %d%n", lws, lws*div);
-            }
-
-            local_work_size = new long[]{lws*div};
+            local_work_size = new long[]{lws};
             // this has to be done in case the supplied work size is bigger than global work size
             local_work_size[0] = Math.min(local_work_size[0], global_work_size[0]);
         }
@@ -193,4 +189,7 @@ public class MatrixVector {
         }
     }
 
+    public int getMatrixSize() {
+        return m;
+    }
 }

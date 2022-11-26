@@ -1,6 +1,7 @@
 package task1;
 
 import java.util.Arrays;
+import java.util.LinkedList;
 
 /**
  * Result Wrapper containing the timing results for both sequential and parallel executions.
@@ -14,14 +15,6 @@ class TimedResults {
      * results from parallel multiplication.
      */
     double[] presults;
-    /**
-     * Used matrix size.
-     */
-    int m;
-    /**
-     * Value for local work size.
-     */
-    long local_work_size;
 
     /**
      * Calculate average sequential time.
@@ -41,46 +34,99 @@ class TimedResults {
         return Arrays.stream(presults).skip(1).parallel().average().orElse(0);
     }
 
-    TimedResults(double[][] results, int m, long lws)
+    TimedResults(double[][] results)
     {
         sresults = results[0]; // sequential results
         presults = results[1]; // parallel results
-        this.m = m;
-        local_work_size = lws;
     }
 }
 
 /**
  * Wrapper class around test run results.
  */
-class TestResults
+class TestResult
 {
+    /**
+     * Time measurements of test run.
+     */
     public TimedResults times;
-    public MatrixVector matVec;
-    public TestResults(double[][] _times, MatrixVector vector, int m, long local_work_size)
+    /**
+     * The matrixvector structure used. This is only used as a cache object and will be overriden during testing.
+     * Every TestResult of a series of different local_work_sizes will contain a reference to the same matrixvector!
+     */
+    public MatrixVector cachedMatrixVector;
+
+    private final int m; // matrix size
+    private final long local_work_size; // local_work_size
+
+    public int getMatrixSize()
     {
-        times = new TimedResults(_times, m, local_work_size);
-        matVec = vector;
+        return this.m;
+    }
+
+    public long getLocalWorkSize()
+    {
+        return local_work_size;
+    }
+
+    /**
+     * On successful use this to create test results.
+     * @param _times Measurements. [0][..] sequential, [1][..] parallel
+     * @param vector The measured matrixvector.
+     */
+    public TestResult(double[][] _times, MatrixVector vector)
+    {
+        times = new TimedResults(_times);
+        cachedMatrixVector = vector;
+
+        // we need to extract these values, because matVec will still be in use afterwards!
+        m = cachedMatrixVector.getMatrixSize();
+        local_work_size = cachedMatrixVector.getLocalWorkSize();
+    }
+
+    /**
+     * If the test failed, this contains the exception.
+     */
+    public Exception error;
+
+    /**
+     * Use this to create a failed test result!
+     * @param matrix_size Matrix size
+     * @param localWorkSize lws
+     * @param e The exception which occured during the test.
+     */
+    public TestResult(int matrix_size, long localWorkSize, Exception e) {
+        times = new TimedResults(new double[2][0]);
+        error = e;
+
+        m = matrix_size;
+        local_work_size = localWorkSize;
     }
 }
 
 
 
 public class Main {
-
+    private static boolean disableOutput = false;
     private static void println(String message)
     {
-        System.out.println(message);
+        if(!disableOutput)
+            System.out.println  (message);
     }
     private static void print(String message)
     {
-        System.out.print(message);
+        if(!disableOutput)
+            System.out.print(message);
     }
     public static void main(String[] args)  {
         // setup
         int m;
         long local_work_size;
 
+        // disable detailed output of test runs
+        boolean disableTestRunOutput = true;
+
+        // parse command line arguments, if any
         if(args.length > 1) {
             m = Integer.parseInt(args[0]);
             local_work_size = Long.parseLong(args[1]);
@@ -90,10 +136,16 @@ public class Main {
             OpenCL.release();
             return;
         }
+
+        /* ----------------------------------------------------------------------*/
+        /* ----------------------    STANDALONE RUNNER   ------------------------*/
+        /* ----------------------------------------------------------------------*/
+
+
         println("RUNNING TEST SUITE...");
 
         int[] matrix_sizes = new int[]{10,1000,2000,4000,8000,15000};
-        long[] local_work_sizes = new long[]{1,2,5,10,20,50,-1};
+        long[] local_work_sizes = new long[]{1,2,5,10,20,30,50,80,100,500,-1};
 
         /* ----------------------------------------------------------------------*/
         println("Starting OpenCL Initialization...");
@@ -102,36 +154,57 @@ public class Main {
         /* ----------------------------------------------------------------------*/
         println("Starting test runs...");
         // matrix of all TimedResults of dimension [matrix_size*local_work_sizes]
-        var times = new TimedResults[matrix_sizes.length][local_work_sizes.length];
+        var results = new TestResult[matrix_sizes.length][local_work_sizes.length];
         // these testresults are used in runTests: They will be reset for every matrix size but may be
         //  reused when the matrix size has not changed
-        TestResults testResults = null;
+        TestResult lastResult = null;
 
         for (int i = 0; i < matrix_sizes.length; i++) {
             int matrix_size = matrix_sizes[i];
+            if(disableTestRunOutput){
+                println("Running tests for (m: %8d)...".formatted(matrix_size));
+                disableOutput = true;
+            }
             for (int j = 0; j < local_work_sizes.length; j++) {
                 long localWorkSize = local_work_sizes[j];
 
                 // wrap the test run in a try catch so the whole suite does not break
                 try
                 {
+                    if(disableTestRunOutput){
+                        disableOutput = false;
+                        print("\t > lws: %5d...".formatted(localWorkSize));
+                        disableOutput = true;
+                    }
+
+
                     // save test results for next test run
-                    testResults = runTests(matrix_size, localWorkSize, testResults);
+                    lastResult = runTests(matrix_size, localWorkSize, lastResult);
                     // create timed results from testResults so we can display them after suite finished
-                    times[i][j] = testResults.times;
+                    results[i][j] = lastResult;
+
+                    disableOutput = false;
+                    println(green("SUCCESS"));
                 }
                 catch(Exception e)
                 {
-                    println(red("ERROR") + "m: %d, lws: %d | %s".formatted(matrix_size, localWorkSize, e.toString()));
+                    if(!disableTestRunOutput)
+                        println(red("ERROR") + "m: %d, lws: %d | %s".formatted(matrix_size, localWorkSize, e.toString()));
+                    else{
+                        disableOutput = false;
+                        println(red("FAIL"));
+                    }
+                    results[i][j] = new TestResult(matrix_size, localWorkSize, e);
                 }
+
 
             }
             // reset last test run because matrix size will change
-            testResults = null;
+            lastResult = null;
         }
 
         // print timed results
-        printResults(times, matrix_sizes, local_work_sizes);
+        printResults(results, matrix_sizes, local_work_sizes);
 
 
         OpenCL.summary();
@@ -139,37 +212,58 @@ public class Main {
         OpenCL.release();
     }
 
+    /* ###############################################################*/
+    /* #################   RESULT PRINTING           #################*/
+    /* ###############################################################*/
+
     /**
      * Prints results in a table to the console.
      * @param results Timed results. [0][.] for sequential times, [1][.] for parallel times.
      * @param sizes The used matrix sizes.
      * @param workSizes The used local_work_sizes.
      */
-    private static void printResults(TimedResults[][] results, int[] sizes, long[] workSizes)
+    private static void printResults(TestResult[][] results, int[] sizes, long[] workSizes)
     {
-        var pavgs = new double[sizes.length][workSizes.length];
+        header("TIMING RESULTS");
 
-        var pad = "                        ";
+        // list errors in here during print
+        var errors = new LinkedList<String>();
 
         var format = "%21s%21s".formatted("Matrix \\ Local-WorkSize", "Sequential") + "%21s".repeat(workSizes.length);
         println(String.format(format, (Object[]) toArray(workSizes)));
 
         for (int i = 0; i < sizes.length; i++) {
             int matrix_size = sizes[i];
-            var line = "%21d               %8.2f".formatted(matrix_size, results[i][0].getAvgSequentialTime());
+
+            // check sequential results first
+            String averageSequentialTime;
+            if(results[i][0].error == null)
+                averageSequentialTime = "%.2f".formatted(results[i][0].times.getAvgSequentialTime());
+            else {
+                averageSequentialTime = red("ERR " + errors.size());
+                errors.add(String.format("ERR %d (m: %d, lws: -): %s", errors.size(), i, results[i][0].error.getMessage()));
+            }
+            var line = "%21d          %13s".formatted(matrix_size, averageSequentialTime);
+
+            // avgs contains a string array of parallel average timings for each local_work_size
             var avgs = new String[workSizes.length];
             for (int j = 0; j < workSizes.length; j++) {
-                long localWorkSize = workSizes[j];
                 var result = results[i][j];
 
-
-                pavgs[i][j] = result.getAvgParallelTime();
-
-                avgs[j] = ("%11.2f"+gray(" (%d)")).formatted(pavgs[i][j], result.local_work_size);
+                if(result.error != null) {
+                    avgs[j] = red("ERR " + errors.size());
+                    errors.add(String.format("ERR %d (m: %d, lws: %d): %s", errors.size(), result.getMatrixSize(), result.getLocalWorkSize(), result.error.getMessage()));
+                }else{
+                    avgs[j] = ("%11.2f"+gray(" (%d)")).formatted(result.times.getAvgParallelTime(), result.getLocalWorkSize());
+                }
             }
             line = line + "%30s".repeat(workSizes.length).formatted((Object[]) avgs);
             println(line);
         }
+
+        println("Errors:");
+        for(String err : errors)
+            println(err);
     }
 
     /* ###############################################################*/
@@ -215,7 +309,7 @@ public class Main {
      * @return A TestResult containing times and the generated MatrixVector class. If null, the MatrixVector is created
      *          and the sequential calculation is performed.
      */
-    private static TestResults runTests(final int m, long local_work_size, TestResults lastTestResults) {
+    private static TestResult runTests(final int m, long local_work_size, TestResult lastTestResults) {
         int origin = -10;
         int bound = 11;
 
@@ -225,9 +319,9 @@ public class Main {
         int pIter = 10;
 
         // return timings
-        var returns = new double[2][];
-        returns[0] = new double[sIter]; // sequential timings
-        returns[1] = new double[pIter]; // parallel timings
+        var measuredTimes = new double[2][];
+        measuredTimes[0] = new double[sIter]; // sequential timings
+        measuredTimes[1] = new double[pIter]; // parallel timings
 
         /* ----------------------------------------------------------------------*/
         println("------------------------------------------");
@@ -238,7 +332,7 @@ public class Main {
         println("");
         println("");
 
-        MatrixVector matVec = null;
+        MatrixVector matVec;
         if(lastTestResults == null){
             println(yellow("Create") + " matrix-vector structure...");
             var creation = Timings.time( () -> new MatrixVector(m, origin, bound));
@@ -249,7 +343,7 @@ public class Main {
         else
         {
             println(green("Reusing") +" last MatrixVector...");
-            matVec = lastTestResults.matVec;
+            matVec = lastTestResults.cachedMatrixVector;
         }
 
         /* ----------------------------------------------------------------------*/
@@ -268,12 +362,12 @@ public class Main {
                 sequentialResult = Timings.time(matVec::sequential);
                 println("%8.2fms".formatted(sequentialResult.time));
 
-                returns[0][i] = sequentialResult.time;
+                measuredTimes[0][i] = sequentialResult.time;
             }
         }else
         {
             println(green("Reusing") +" last sequential results...");
-            returns[0] = lastTestResults.times.sresults;
+            measuredTimes[0] = lastTestResults.times.sresults;
             sequentialResult = new TimeResult<>(0, matVec.solution);
         }
 
@@ -288,7 +382,7 @@ public class Main {
 
             var parallelResult = matVec.readParallel();
             if (areResultsEqual(m, sequentialResult.result, parallelResult)){
-                returns[1][i] = parallelTime;
+                measuredTimes[1][i] = parallelTime;
             }else{
                 throw new RuntimeException("Parallel result did not match!");
             }
@@ -296,7 +390,7 @@ public class Main {
         println("Release local parallel buffers.");
         matVec.releaseParallel();
 
-        return new TestResults(returns, matVec, m, matVec.getLocalWorkSize());
+        return new TestResult(measuredTimes, matVec);
     }
 
     /**
@@ -316,6 +410,17 @@ public class Main {
             }
         }
         return true;
+    }
+
+    public static void header(String header) {
+        println("");
+        println("");
+        println(" ############%s############".formatted(centerString(30,header)));
+        println("");
+    }
+
+    private static String centerString (int width, String s) {
+        return String.format("%-" + width  + "s", String.format("%" + (s.length() + (width - s.length()) / 2) + "s", s));
     }
 }
 
