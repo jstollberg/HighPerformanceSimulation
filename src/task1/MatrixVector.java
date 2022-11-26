@@ -1,22 +1,18 @@
 package task1;
 
-import org.jocl.*;
+import org.jocl.Pointer;
+import org.jocl.Sizeof;
+import org.jocl.cl_mem;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.Random;
 
 import static org.jocl.CL.*;
-import static org.jocl.CL.clSetKernelArg;
 
 /**
  * Class wrapping a matrix lhs and a vector rhs.
  */
 public class MatrixVector {
-    private cl_program program;
-    private cl_kernel kernel;
-
     // create memory objects
     private cl_mem[] memBuffers;
 
@@ -81,38 +77,41 @@ public class MatrixVector {
     /**
      * Initialize parallel procedures.
      *
-     * @param context   OpenCL Context.
      * @param lws the local work size
      */
-    public void initParallel(cl_context context, long lws)
+    public void initParallel(long lws)
     {
+        if(!OpenCL.isInitialized())
+            throw new RuntimeException("Initialize OpenCL first!");
+
         // create the kernel to run parallel matrix multiplication
         try {
-            createKernel(context);
+            OpenCL.createKernel("matrix_vec");
         } catch (IOException e) {
             throw new RuntimeException("Kernel file was not found!");
         }
 
         memBuffers = new cl_mem[3];
-        memBuffers[0] = clCreateBuffer(context,
+        memBuffers[0] = clCreateBuffer(OpenCL.context,
                 CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
                 (long) Sizeof.cl_short * m * m, Pointer.to(matrix), null);
-        memBuffers[1] = clCreateBuffer(context,
+        memBuffers[1] = clCreateBuffer(OpenCL.context,
                 CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
                 (long) Sizeof.cl_short * m, Pointer.to(vector), null);
-        memBuffers[2] = clCreateBuffer(context,
+        memBuffers[2] = clCreateBuffer(OpenCL.context,
                 CL_MEM_READ_WRITE,
                 (long) Sizeof.cl_short * m, null, null);
 
+        int[] ms = new int[]{m};
         // specify kernel arguments to be passed into the kernels
-        clSetKernelArg(kernel, 0,
+        clSetKernelArg(OpenCL.kernel, 0,
                 Sizeof.cl_mem, Pointer.to(memBuffers[0]));
-        clSetKernelArg(kernel, 1,
+        clSetKernelArg(OpenCL.kernel, 1,
                 Sizeof.cl_mem, Pointer.to(memBuffers[1]));
-        clSetKernelArg(kernel, 2,
+        clSetKernelArg(OpenCL.kernel, 2,
                 Sizeof.cl_mem, Pointer.to(memBuffers[2]));
-        clSetKernelArg(kernel, 3,
-                Sizeof.cl_int, Pointer.to(new int[]{m}));
+        clSetKernelArg(OpenCL.kernel, 3,
+                Sizeof.cl_int, Pointer.to(ms));
 
         global_work_size = new long[]{m};
         if(lws != -1)
@@ -126,21 +125,20 @@ public class MatrixVector {
     /**
      * Read parallel results from commandQueue.
      *
-     * @param commandQueue  The queue to read from.
      * @return Results in array.
      */
-    public short[] readParallel(cl_command_queue commandQueue)
+    public short[] readParallel()
     {
         if(!parallelRun)
-            throw new RuntimeException("parallel(commandQueue) must be called before reading results!");
+            throw new RuntimeException("parallel() must be called before reading results!");
 
         // read result into buffer
         short [] result = new short[this.m];
-        clEnqueueReadBuffer(commandQueue, memBuffers[2], CL_TRUE, 0,
+        clEnqueueReadBuffer(OpenCL.commandQueue, memBuffers[2], CL_TRUE, 0,
                 (long) m * Sizeof.cl_short, Pointer.to(result), 0, null, null);
 
         // wait for commandqueue to finish
-        clFinish(commandQueue);
+        clFinish(OpenCL.commandQueue);
 
         return result;
     }
@@ -148,40 +146,28 @@ public class MatrixVector {
     /**
      * Execute matrix multiplication in parallel using openCL.
      *
-     * @param commandQueue CommandQueue of the context.
      */
-    public void parallel(cl_command_queue commandQueue)
+    public void parallel()
     {
-        if(!parallelInitialized)
-            throw new RuntimeException("Parallel core must be initialized first using init_parallel()!");
+        if(!parallelInitialized || !OpenCL.hasKernel())
+            throw new RuntimeException("Parallel core and OpenCL must be initialized first!");
 
-        clEnqueueNDRangeKernel(commandQueue, kernel, 1, null,
-                global_work_size, null, 0, null, null);
+        // this only queues the kernels for execution
+        // they do not run either clFinish is called or the output buffer is read
+        clEnqueueNDRangeKernel(OpenCL.commandQueue, OpenCL.kernel, 1, null,
+                global_work_size, local_work_size, 0, null, null);
 
         // wait for commandqueue to finish
-        clFinish(commandQueue);
+        clFinish(OpenCL.commandQueue);
 
         parallelRun = true;
     }
 
-    /**
-     * Create kernel for the parallel execution on GPU context.
-     *
-     * @param context: The context the kernel should run in.
-     * @throws IOException: kernel.cl not found.
-     */
-    private void createKernel(cl_context context) throws IOException {
-        String kernelSource = Files.readString(Path.of("kernel.cl"));
 
-        // create the program from the source code
-        program = clCreateProgramWithSource(context,
-                1, new String[]{ kernelSource }, null, null);
-
-        // build the program
-        clBuildProgram(program, 0, null, null, null, null);
-
-        // create the kernel
-        kernel = clCreateKernel(program, "matrix_vec", null);
+    public void releaseParallel(){
+        for(cl_mem buff : memBuffers){
+            clReleaseMemObject(buff);
+        }
     }
 
 }
