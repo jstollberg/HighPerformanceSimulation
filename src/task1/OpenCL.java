@@ -132,11 +132,6 @@ public class OpenCL {
                 contextProperties, numDevices, new cl_device_id[]{device},
                 null, null, null);
 
-        String deviceName = getDeviceName(devices[0]);
-        System.out.printf("CL_DEVICE_NAME: %s\n", deviceName);
-        String maxWorkGroupSize = String.valueOf(getDeviceMaxWorkGroupSize(devices[0]));
-        System.out.printf("CL_DEVICE_MAX_WORK_GROUP_SIZE: %s\n", maxWorkGroupSize);
-
         // create a command-queue for the selected device
         cl_queue_properties properties = new cl_queue_properties();
         commandQueue = clCreateCommandQueueWithProperties(
@@ -202,6 +197,6 @@ public class OpenCL {
         var maxComputeUnits  = getDeviceUint(device, CL_DEVICE_MAX_COMPUTE_UNITS);
         System.out.printf("%35s%30d%n", "CL_DEVICE_MAX_COMPUTE_UNITS", maxComputeUnits);
 
-
+        System.out.println("\n".repeat(1));
     }
 }

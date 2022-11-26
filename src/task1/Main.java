@@ -150,15 +150,17 @@ public class Main {
 
         println("RUNNING TEST SUITE...");
 
-        int[] matrix_sizes = new int[]{10,1000,2000,4000,8000,15000,40000};
+        int[] matrix_sizes = new int[]{10,1000,2000,4000,8000};
         long[] local_work_sizes = new long[]{1,2,5,10,20,50,1000,-1};
 
         /* ----------------------------------------------------------------------*/
-        println("Starting OpenCL Initialization...");
         OpenCL.init();
+        OpenCL.summary();
+
+
 
         /* ----------------------------------------------------------------------*/
-        println("Starting test runs...");
+        header("TEST RUNS");
         // matrix of all TimedResults of dimension [matrix_size*local_work_sizes]
         var results = new TestResult[matrix_sizes.length][local_work_sizes.length];
         // these testresults are used in runTests: They will be reset for every matrix size but may be
@@ -212,8 +214,6 @@ public class Main {
         // print timed results
         printResults(results, matrix_sizes, local_work_sizes);
 
-
-        OpenCL.summary();
         // release all opencl buffers and objects
         OpenCL.release();
     }
@@ -235,8 +235,12 @@ public class Main {
         // list errors in here during print
         var errors = new LinkedList<String>();
 
-        var format = "%21s%21s".formatted("Matrix \\ Local-WorkSize", "Sequential") + "%21s".repeat(workSizes.length);
-        println(String.format(format, (Object[]) toArray(workSizes)));
+        println("\t- All values in [ms].");
+        println("\t- Values are averaged using multiple runs skipping first (warmup).");
+
+        println("");
+        var headerLine = "%15s%21s%21s".formatted("Matrix size", "Sequential (first)", "Parallel (fastest)") + "%21s".repeat(workSizes.length);
+        println(String.format(headerLine, (Object[]) toArray(workSizes)));
 
         for (int i = 0; i < sizes.length; i++) {
             int matrix_size = sizes[i];
@@ -249,10 +253,12 @@ public class Main {
                 averageSequentialTime = red("ERR " + errors.size());
                 errors.add(String.format("ERR %d (m: %d, lws: -): %s", errors.size(), i, results[i][0].error.getMessage()));
             }
-            var line = "%21d          %13s".formatted(matrix_size, averageSequentialTime);
 
             // avgs contains a string array of parallel average timings for each local_work_size
             var avgs = new String[workSizes.length];
+            var minTime = Double.MAX_VALUE;
+            long minLWS = 0;
+
             for (int j = 0; j < workSizes.length; j++) {
                 var result = results[i][j];
 
@@ -260,16 +266,25 @@ public class Main {
                     avgs[j] = red("ERR " + errors.size());
                     errors.add(String.format("ERR %d (m: %d, lws: %d): %s", errors.size(), result.getMatrixSize(), result.getLocalWorkSize(), result.error.getMessage()));
                 }else{
-                    avgs[j] = ("%11.2f"+gray(" (%d)")).formatted(result.times.getAvgParallelTime(), result.getLocalWorkSize());
+                    var avg = result.times.getAvgParallelTime();
+
+                    if(avg < minTime){
+                        minTime = avg;
+                        minLWS = result.getLocalWorkSize();
+                    }
+                    avgs[j] = ("%11.2f"+gray(" (%d)")).formatted(avg, result.getLocalWorkSize());
                 }
             }
+            var line = "%15d%21s%30s".formatted(matrix_size, averageSequentialTime, ("%9.2f " +gray( "(%2d)" )).formatted(minTime, minLWS));
             line = line + "%30s".repeat(workSizes.length).formatted((Object[]) avgs);
             println(line);
         }
 
-        println("Errors:");
-        for(String err : errors)
-            println(err);
+        if(errors.size() > 0){
+            println("Errors:");
+            for(String err : errors)
+                println(err);
+        }
     }
 
     /* ###############################################################*/
@@ -308,7 +323,7 @@ public class Main {
         String[] strArray = new String[longs.length];
 
         for (int i = 0; i < longs.length; i++) {
-            strArray[i] = String.valueOf(longs[i]);
+            strArray[i] = "LWS " + longs[i];
 
         }
         return strArray;
@@ -433,7 +448,9 @@ public class Main {
     public static void header(String header) {
         println("");
         println("");
-        println(" ############%s############".formatted(centerString(30,header)));
+        println("############" + "#".repeat(30)+"############");
+        println("############%s############".formatted(centerString(30,header)));
+        println("############" + "#".repeat(30)+"############");
         println("");
     }
 
