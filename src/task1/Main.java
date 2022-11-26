@@ -190,7 +190,7 @@ public class Main {
                     results[i][j] = lastResult;
 
                     disableOutput = false;
-                    println(green("SUCCESS"));
+                    println(green("SUCCESS") + "(%6.2f)ms".formatted(lastResult.times.getAvgParallelTime()));
                 }
                 catch(Exception e)
                 {
