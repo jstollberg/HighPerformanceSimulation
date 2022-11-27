@@ -183,6 +183,7 @@ public class Main {
         OpenCL.summary();
 
 
+        // Warning: If the first run fails during the opencl operation, test results might get scuffed
 
         /* ----------------------------------------------------------------------*/
         header("TEST RUNS");
