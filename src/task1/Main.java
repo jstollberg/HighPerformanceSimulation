@@ -150,8 +150,8 @@ public class Main {
 
         println("RUNNING TEST SUITE...");
 
-        int[] matrix_sizes = new int[]{10,100,500,1000,2000,4000,8000,15000,40000};
-        long[] local_work_sizes = new long[]{-1,1,10,20,50,1000};
+        int[] matrix_sizes = new int[]{10,100,500,1000,2000,4000,8000,15000};
+        long[] local_work_sizes = new long[]{-2,-1,1,10,20,50,1000};
 
         /* ----------------------------------------------------------------------*/
         OpenCL.init();
@@ -197,7 +197,7 @@ public class Main {
                 catch(Exception e)
                 {
                     if(!disableTestRunOutput)
-                        println(red("ERROR") + "m: %d, lws: %d | %s".formatted(matrix_size, localWorkSize, e.toString()));
+                        println(red("ERROR") + "m: %d, lws: %d | %s".formatted(matrix_size, lastResult.cachedMatrixVector.getLocalWorkSize(), e.toString()));
                     else{
                         disableOutput = false;
                         println(red("FAIL"));
@@ -263,7 +263,7 @@ public class Main {
                 var result = results[i][j];
 
                 if(result.error != null) {
-                    avgs[j] = red("ERR " + errors.size());
+                    avgs[j] = "%16s".formatted(red("ERR " + errors.size()));
                     errors.add(String.format("ERR %d (m: %d, lws: %d): %s", errors.size(), result.getMatrixSize(), result.getLocalWorkSize(), result.error.getMessage()));
                 }else{
                     var avg = result.times.getAvgParallelTime();
@@ -381,7 +381,7 @@ public class Main {
 
         /* ----------------------------------------------------------------------*/
         println("Initializing parallel matrix multiplication...");
-        matVec.initParallel(local_work_size);
+        matVec.initParallel(local_work_size, OpenCL.getAvailableCUs());
 
         /* ----------------------------------------------------------------------*/
         TimeResult<short[]> sequentialResult = null;

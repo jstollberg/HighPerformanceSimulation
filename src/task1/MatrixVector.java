@@ -95,7 +95,7 @@ public class MatrixVector {
      *
      * @param lws the local work size
      */
-    public void initParallel(long lws)
+    public void initParallel(long lws, int availableUnits)
     {
         if(!OpenCL.isInitialized())
             throw new RuntimeException("Initialize OpenCL first!");
@@ -154,15 +154,18 @@ public class MatrixVector {
         global_work_size = new long[]{m};
 
         // lws = -1 -> automatic local_work_size
-        if(lws != -1) {
+        if(lws == -2){
+            var computeWorkGroups = (double)m / ((double)availableUnits * 2.0);
+            var computeLWS = m/(long)Math.ceil(computeWorkGroups);
+            local_work_size = new long[]{computeLWS};
+            local_work_size[0] = Math.min(local_work_size[0], global_work_size[0]);
+        }else if(lws == -1) {
+            local_work_size = null;
+        } else {
             local_work_size = new long[]{lws};
             // this has to be done in case the supplied work size is bigger than global work size
             local_work_size[0] = Math.min(local_work_size[0], global_work_size[0]);
         }
-        else
-            local_work_size = null;
-
-
 
         parallelInitialized = true;
     }

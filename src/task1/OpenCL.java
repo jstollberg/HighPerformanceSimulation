@@ -9,6 +9,7 @@ import static org.jocl.CL.*;
 
 public class OpenCL {
     private static boolean _initialized;
+
     public static boolean isInitialized()
     {
         return _initialized;
@@ -198,5 +199,9 @@ public class OpenCL {
         System.out.printf("%35s%30d%n", "CL_DEVICE_MAX_COMPUTE_UNITS", maxComputeUnits);
 
         System.out.println("\n".repeat(1));
+    }
+
+    public static int getAvailableCUs() {
+        return getDeviceUint(device, CL_DEVICE_MAX_COMPUTE_UNITS);
     }
 }
