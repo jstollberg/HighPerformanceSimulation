@@ -140,7 +140,7 @@ public class Main {
         long local_work_size;
 
         // disable detailed output of test runs
-        boolean disableTestRunOutput = false;
+        boolean disableTestRunOutput = true;
 
         // parse command line arguments, if any
         if(args.length > 1) {
@@ -151,10 +151,13 @@ public class Main {
 
             OpenCL.release();
             return;
-        }else if(args.length == 1)
+        }
+        else if(args.length == 1)
         {
             if(args[0].equals("colored"))
                 activateColors = true;
+            if(args[0].equals("verbose"))
+                disableTestRunOutput = false;
         }
 
         /* ----------------------------------------------------------------------*/
