@@ -147,7 +147,14 @@ public class Main {
             m = Integer.parseInt(args[0]);
             local_work_size = Long.parseLong(args[1]);
 
-            runTests(m, local_work_size, null);
+            OpenCL.init();
+            OpenCL.summary();
+
+            var result = runTests(m, local_work_size, null);
+
+            var results = new TestResult[1][1];
+            results[0][0] = result;
+            printResults(results,new int[]{m}, new long[]{local_work_size});
 
             OpenCL.release();
             return;
@@ -168,7 +175,7 @@ public class Main {
         println("RUNNING TEST SUITE...");
 
 
-        int[] matrix_sizes = new int[]{10,100,500,1000,2000,4000,5200};
+        int[] matrix_sizes = new int[]{10,100,500,1000,2000,4000,8000,15000,40000};
         long[] local_work_sizes = new long[]{-2,-1,1,10,20,50,1000};
 
         /* ----------------------------------------------------------------------*/
