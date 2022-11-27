@@ -150,7 +150,8 @@ public class Main {
 
         println("RUNNING TEST SUITE...");
 
-        int[] matrix_sizes = new int[]{10,100,500,1000,2000,4000,8000,15000};
+
+        int[] matrix_sizes = new int[]{10,100,500,1000,2000,4000,5200};
         long[] local_work_sizes = new long[]{-2,-1,1,10,20,50,1000};
 
         /* ----------------------------------------------------------------------*/
@@ -202,7 +203,8 @@ public class Main {
                         disableOutput = false;
                         println(red("FAIL"));
                     }
-                    results[i][j] = new TestResult(matrix_size, localWorkSize, e);
+                    // use the cached matrixvector to find used lws (may differ from mode -2 or -1)
+                    results[i][j] = new TestResult(matrix_size, lastResult.cachedMatrixVector.getLocalWorkSize(), e);
                 }
 
 
@@ -238,24 +240,24 @@ public class Main {
         println("\t- All values in [ms].");
         println("\t- Values are averaged using multiple runs skipping first (warmup).");
 
+        // table header
         println("");
-        var headerLine = "%15s%21s%21s".formatted("Matrix size", "Sequential (first)", "Parallel (fastest)") + "%21s".repeat(workSizes.length);
-        println(String.format(headerLine, (Object[]) toArray(workSizes)));
+        var headerLine = "%-15s%-21s%-21s|".formatted("Matrix size", "Sequential (first)", "Parallel (fastest)") + "%21s".repeat(workSizes.length);
+        var headerOut = String.format(headerLine, (Object[]) toArray(workSizes));
+        println(headerOut);
+        println("-".repeat(headerOut.length()));
 
+        // array containing cell string content
+        var cells = new String[sizes.length][3+workSizes.length];
+
+        // iterate rows
         for (int i = 0; i < sizes.length; i++) {
-            int matrix_size = sizes[i];
-
-            // check sequential results first
-            String averageSequentialTime;
-            if(results[i][0].error == null)
-                averageSequentialTime = "%.2f".formatted(results[i][0].times.getAvgSequentialTime());
-            else {
-                averageSequentialTime = red("ERR " + errors.size());
-                errors.add(String.format("ERR %d (m: %d, lws: -): %s", errors.size(), i, results[i][0].error.getMessage()));
-            }
+            // put matrix size in first column
+            cells[i][0] = String.valueOf(sizes[i]);
+            // put avg sequential time in first column
+            cells[i][1] = "%.2f".formatted(results[i][0].times.getAvgSequentialTime());
 
             // avgs contains a string array of parallel average timings for each local_work_size
-            var avgs = new String[workSizes.length];
             var minTime = Double.MAX_VALUE;
             long minLWS = 0;
 
@@ -263,7 +265,7 @@ public class Main {
                 var result = results[i][j];
 
                 if(result.error != null) {
-                    avgs[j] = "%16s".formatted(red("ERR " + errors.size()));
+                    cells[i][3+j] = "%s".formatted(red("ERR " + errors.size()));
                     errors.add(String.format("ERR %d (m: %d, lws: %d): %s", errors.size(), result.getMatrixSize(), result.getLocalWorkSize(), result.error.getMessage()));
                 }else{
                     var avg = result.times.getAvgParallelTime();
@@ -272,15 +274,25 @@ public class Main {
                         minTime = avg;
                         minLWS = result.getLocalWorkSize();
                     }
-                    avgs[j] = ("%11.2f"+gray(" (%d)")).formatted(avg, result.getLocalWorkSize());
+                    cells[i][3+j] = ("%.2f"+gray(" (%d)")).formatted(avg, result.getLocalWorkSize());
                 }
             }
-            var line = "%15d%21s%30s".formatted(matrix_size, averageSequentialTime, ("%9.2f " +gray( "(%2d)" )).formatted(minTime, minLWS));
-            line = line + "%30s".repeat(workSizes.length).formatted((Object[]) avgs);
-            println(line);
+
+            // put minimum time in second column
+            cells[i][2] = ("%.2f " +gray( "(%2d)" )).formatted(minTime, minLWS);
+        }
+
+        // print all rows
+        for (int i = 0; i < sizes.length; i++) {
+            var row = cells[i];
+            var rowFormat = "%-15s%-21s%-30s|" + "%30s".repeat(workSizes.length) + "%n";
+            // var line = String.format(rowFormat, (Object[])row);
+            System.out.format(rowFormat, (Object[]) row);
         }
 
         if(errors.size() > 0){
+            println("");
+            println("");
             println("Errors:");
             for(String err : errors)
                 println(err);
@@ -379,9 +391,6 @@ public class Main {
             matVec = lastTestResults.cachedMatrixVector;
         }
 
-        /* ----------------------------------------------------------------------*/
-        println("Initializing parallel matrix multiplication...");
-        matVec.initParallel(local_work_size, OpenCL.getAvailableCUs());
 
         /* ----------------------------------------------------------------------*/
         TimeResult<short[]> sequentialResult = null;
@@ -403,6 +412,11 @@ public class Main {
             measuredTimes[0] = lastTestResults.times.sresults;
             sequentialResult = new TimeResult<>(0, matVec.solution);
         }
+
+
+        /* ----------------------------------------------------------------------*/
+        println("Initializing parallel matrix multiplication...");
+        matVec.initParallel(local_work_size, OpenCL.getAvailableCUs());
 
         /* ----------------------------------------------------------------------*/
         println(yellow("Running") +" parallel multiplication...");
