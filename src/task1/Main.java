@@ -176,7 +176,7 @@ public class Main {
 
 
         int[] matrix_sizes = new int[]{10,100,500,1000,2000,4000,8000,15000,40000};
-        long[] local_work_sizes = new long[]{-2,-1,1,10,20,50,1000};
+        long[] local_work_sizes = new long[]{/*-2,*/-1,1,10,20,50,1000};
 
         /* ----------------------------------------------------------------------*/
         OpenCL.init();
