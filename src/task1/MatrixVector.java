@@ -11,6 +11,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Random;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import static org.jocl.CL.*;
 
@@ -75,6 +76,21 @@ public class MatrixVector {
     /* ###############################################################*/
     /* #################   PARALLEL PROCEDURES       #################*/
     /* ###############################################################*/
+
+    /**
+     * Perform the computation of the matrix-vector product using a parallel stream.
+     * 
+     * @return the matrix-vector product
+     */
+    public short[] parallelAsStream() {
+        solution = new short[this.m];
+        IntStream.range(0, m).parallel().forEach(i -> {
+            for (int j = 0; j < m; j++) {
+                solution[i] += matrix[i * m + j] * vector[j];
+            }
+        });
+        return solution;
+    }
 
     private boolean parallelInitialized = false;
     private boolean parallelRun = false;
