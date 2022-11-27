@@ -15,6 +15,10 @@ class TimedResults {
      * results from parallel multiplication.
      */
     double[] presults;
+    /**
+     * Results from multiplication using a parallel stream.
+     */
+    double[] psresults;
 
     /**
      * Calculate average sequential time.
@@ -34,10 +38,20 @@ class TimedResults {
         return Arrays.stream(presults).skip(1).parallel().average().orElse(0);
     }
 
+    /**
+     * Calculate average time from parallel stream computation.
+     * @return Average parallel stream time
+     */
+    public double getAvgParallelStreamTime()
+    {
+        return Arrays.stream(psresults).parallel().average().orElse(0);
+    }
+
     TimedResults(double[][] results)
     {
         sresults = results[0]; // sequential results
         presults = results[1]; // parallel results
+        psresults = results[2]; // parallel stream results
     }
 }
 

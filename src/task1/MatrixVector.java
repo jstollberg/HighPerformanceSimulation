@@ -77,25 +77,26 @@ public class MatrixVector {
     /* #################   PARALLEL PROCEDURES       #################*/
     /* ###############################################################*/
 
-    /**
-     * Perform the computation of the matrix-vector product using a parallel stream.
-     * 
-     * @return the matrix-vector product
-     */
-    public short[] parallelAsStream() {
-        solution = new short[this.m];
-        IntStream.range(0, m).parallel().forEach(i -> {
-            for (int j = 0; j < m; j++) {
-                solution[i] += matrix[i * m + j] * vector[j];
-            }
-        });
-        return solution;
-    }
-
+    short[] streamSolution;
     private boolean parallelInitialized = false;
     private boolean parallelRun = false;
     private long[] local_work_size;
     private long[] global_work_size;
+
+    /**
+     * Perform the computation of the matrix-vector product using a parallel stream.
+     *
+     * @return the matrix-vector product
+     */
+    public short[] parallelAsStream() {
+        streamSolution = new short[this.m];
+        IntStream.range(0, m).parallel().forEach(i -> {
+            for (int j = 0; j < m; j++) {
+                streamSolution[i] += matrix[i * m + j] * vector[j];
+            }
+        });
+        return streamSolution;
+    }
 
     /**
      * Get the actual local_work_size. During setup it may have changed!
