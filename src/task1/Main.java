@@ -110,7 +110,7 @@ class TestResult
      * @param e The exception which occured during the test.
      */
     public TestResult(int matrix_size, long localWorkSize, Exception e) {
-        times = new TimedResults(new double[2][0]);
+        times = new TimedResults(new double[3][0]);
         error = e;
 
         m = matrix_size;
@@ -140,7 +140,7 @@ public class Main {
         long local_work_size;
 
         // disable detailed output of test runs
-        boolean disableTestRunOutput = true;
+        boolean disableTestRunOutput = false;
 
         // parse command line arguments, if any
         if(args.length > 1) {
@@ -211,9 +211,12 @@ public class Main {
                 }
                 catch(Exception e)
                 {
-                    if(!disableTestRunOutput)
-                        println(red("ERROR") + "m: %d, lws: %d | %s".formatted(matrix_size, lastResult.cachedMatrixVector.getLocalWorkSize(), e.toString()));
-                    else{
+                    if(!disableTestRunOutput) {
+                        if(lastResult != null)
+                            println(red("ERROR") + "m: %d, lws: %d | %s".formatted(matrix_size, lastResult.cachedMatrixVector.getLocalWorkSize(), e.toString()));
+                        else
+                            println(red(e.toString()));
+                    } else{
                         disableOutput = false;
                         println(red("FAIL"));
                     }
@@ -253,23 +256,25 @@ public class Main {
 
         println("\t- All values in [ms].");
         println("\t- Values are averaged using multiple runs skipping first (warmup).");
+        println("\t- First three times are fastest of the measurements.");
 
         // table header
         println("");
-        var headerLine = "%-15s%-21s%-21s|".formatted("Matrix size", "Sequential (first)", "Parallel (fastest)") + "%21s".repeat(workSizes.length);
+        var headerLine = "%-15s%-21s%-21s%-21s|".formatted("Matrix size", "Sequential (CPU)", "Parallel (CPU)", "Parallel (GPU)") + "%21s".repeat(workSizes.length);
         var headerOut = String.format(headerLine, (Object[]) toArray(workSizes));
         println(headerOut);
         println("-".repeat(headerOut.length()));
 
         // array containing cell string content
-        var cells = new String[sizes.length][3+workSizes.length];
+        var cells = new String[sizes.length][4+workSizes.length];
 
         // iterate rows
         for (int i = 0; i < sizes.length; i++) {
             // put matrix size in first column
             cells[i][0] = String.valueOf(sizes[i]);
-            // put avg sequential time in first column
+            // put avg sequential time in first column, retrieve from first result of current matrix_size!
             cells[i][1] = "%.2f".formatted(results[i][0].times.getAvgSequentialTime());
+            cells[i][2] = "%.2f".formatted(results[i][0].times.getAvgParallelStreamTime());
 
             // avgs contains a string array of parallel average timings for each local_work_size
             var minTime = Double.MAX_VALUE;
@@ -288,18 +293,18 @@ public class Main {
                         minTime = avg;
                         minLWS = result.getLocalWorkSize();
                     }
-                    cells[i][3+j] = ("%.2f"+gray(" (%d)")).formatted(avg, result.getLocalWorkSize());
+                    cells[i][4+j] = ("%.2f"+gray(" (%d)")).formatted(avg, result.getLocalWorkSize());
                 }
             }
 
             // put minimum time in second column
-            cells[i][2] = ("%.2f " +gray( "(%2d)" )).formatted(minTime, minLWS);
+            cells[i][3] = ("%.2f " +gray( "(%2d)" )).formatted(minTime, minLWS);
         }
 
         // print all rows
         for (int i = 0; i < sizes.length; i++) {
             var row = cells[i];
-            var rowFormat = "%-15s%-21s%-30s|" + "%30s".repeat(workSizes.length) + "%n";
+            var rowFormat = "%-15s%-21s%-21s%-30s|" + "%30s".repeat(workSizes.length) + "%n";
             // var line = String.format(rowFormat, (Object[])row);
             System.out.format(rowFormat, (Object[]) row);
         }
@@ -376,11 +381,14 @@ public class Main {
         int sIter = 10;
         // number of parallel executions
         int pIter = 10;
+        // number of parallel (CPU) executions
+        int psIter = 10;
 
         // return timings
-        var measuredTimes = new double[2][];
+        var measuredTimes = new double[3][];
         measuredTimes[0] = new double[sIter]; // sequential timings
         measuredTimes[1] = new double[pIter]; // parallel timings
+        measuredTimes[2] = new double[psIter]; // parallel timings
 
         /* ----------------------------------------------------------------------*/
         println("------------------------------------------");
@@ -408,6 +416,7 @@ public class Main {
 
         /* ----------------------------------------------------------------------*/
         TimeResult<short[]> sequentialResult = null;
+        TimeResult<short[]> parallelStreamResult;
         if(lastTestResults == null)
         {
             println(yellow("Running") +" sequential multiplication...");
@@ -420,10 +429,31 @@ public class Main {
 
                 measuredTimes[0][i] = sequentialResult.time;
             }
-        }else
+
+            println(yellow("Running") +" parallel (CPU) multiplication...");
+            // execute real timings
+            for(int i = 0; i < psIter; i++)
+            {
+                print("\t[%2d|%2d]: ".formatted(i + 1, psIter));
+                parallelStreamResult = Timings.time(matVec::parallelAsStream);
+                println("%8.2fms".formatted(parallelStreamResult.time));
+
+                // check stream results against sequential results
+                if (areResultsEqual(m, sequentialResult.result, parallelStreamResult.result)){
+                    measuredTimes[2][i] = parallelStreamResult.time;
+                }else{
+                    throw new RuntimeException("Parallel result did not match!");
+                }
+
+            }
+
+        }
+        else
         {
             println(green("Reusing") +" last sequential results...");
             measuredTimes[0] = lastTestResults.times.sresults;
+            measuredTimes[2] = lastTestResults.times.psresults;
+            // create this result manually because it will be used to validate gpu solutions
             sequentialResult = new TimeResult<>(0, matVec.solution);
         }
 
@@ -433,7 +463,7 @@ public class Main {
         matVec.initParallel(local_work_size, OpenCL.getAvailableCUs());
 
         /* ----------------------------------------------------------------------*/
-        println(yellow("Running") +" parallel multiplication...");
+        println(yellow("Running") +" parallel (GPU) multiplication...");
         // execute real timings
         for(int i = 0; i < pIter; i++)
         {
