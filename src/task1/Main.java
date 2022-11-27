@@ -220,8 +220,11 @@ public class Main {
                         disableOutput = false;
                         println(red("FAIL"));
                     }
-                    // use the cached matrixvector to find used lws (may differ from mode -2 or -1)
-                    results[i][j] = new TestResult(matrix_size, lastResult.cachedMatrixVector.getLocalWorkSize(), e);
+                    if(lastResult!=null)
+                        // use the cached matrixvector to find used lws (may differ from mode -2 or -1)
+                        results[i][j] = new TestResult(matrix_size, lastResult.cachedMatrixVector.getLocalWorkSize(), e);
+                    else
+                        results[i][j] = new TestResult(matrix_size, localWorkSize, e);
                 }
 
 

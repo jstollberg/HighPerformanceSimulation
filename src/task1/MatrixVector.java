@@ -41,8 +41,9 @@ public class MatrixVector {
         Random rd = new Random();
 
         // fill matrix and vector with random short values
-        short[] matrix = new short[m * m];
-        short[] vector = new short[m];
+        matrix = new short[m * m];
+        vector = new short[m];
+
         for (int i = 0; i < m; i++) {
             vector[i] = (short) (rd.nextInt(bound - origin) + origin);
             for (int j = 0; j < m; j++) {
@@ -51,8 +52,6 @@ public class MatrixVector {
         }
 
         this.m = m;
-        this.matrix = matrix;
-        this.vector = vector;
     }
 
     /**
