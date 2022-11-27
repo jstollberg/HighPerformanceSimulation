@@ -43,12 +43,12 @@ public class MatrixVector {
         // fill matrix and vector with random short values
         short[] matrix = new short[m * m];
         short[] vector = new short[m];
-        IntStream.range(0, m).parallel().forEach(i -> {
+        for (int i = 0; i < m; i++) {
             vector[i] = (short) (rd.nextInt(bound - origin) + origin);
             for (int j = 0; j < m; j++) {
                 matrix[i * m + j] = (short) (rd.nextInt(bound - origin) + origin);
             }
-        });
+        }
 
         this.m = m;
         this.matrix = matrix;
