@@ -1,0 +1,101 @@
+\documentclass[
+	ngerman,
+	ruledheaders=section,
+	class=report,
+	thesis={type=Dokumentation},
+	ignore-missing-data=true,
+	accentcolor=9c,
+	custommargins=false,
+	marginpar=false,
+	parskip=half-,
+	fontsize=11pt,
+]{tudapub}
+
+% compatibility with older pdflatex versions
+\usepackage{iftex}
+\ifPDFTeX
+	\usepackage[utf8]{inputenc}
+\fi
+
+% language packages
+\usepackage[english, main=ngerman]{babel}
+\usepackage[autostyle]{csquotes}
+
+% tables
+\usepackage{tabularx}
+\usepackage{booktabs}
+
+% mathematics
+\usepackage{mathtools}
+\usepackage{amssymb}
+\usepackage{siunitx}
+\sisetup{locale=DE}
+
+% further packages
+\usepackage[skip=10pt]{caption}
+\usepackage{graphics,graphicx}
+\usepackage[sf, SF]{subfigure}
+\usepackage{listings}
+\lstset{numbers=left, 
+		numberstyle=\tiny, 
+		numbersep=5pt, 
+		backgroundcolor=\color{lightgray}, 
+		xleftmargin=10pt, 
+		showstringspaces=false, 
+		tabsize=4}
+\usepackage{epstopdf}
+\usepackage{float}
+
+% custom commands
+\let\file\texttt
+\let\code\texttt
+\let\tbs\textbackslash
+\let\pck\textsf
+\let\cls\textsf
+\newcommand{\mr}[1]{\mathrm{#1}}
+\def\code#1{\texttt{#1}}
+
+% start document
+\setlength\intextsep{22pt}
+\begin{document}
+
+\Metadata{
+	title=1. Hausübung - OpenCL,
+	author=Leon Bohmann, Jonathan Stollberg
+}
+
+\title{1. Hausübung - OpenCL}
+\author[]{Leon Bohmann (2493657) und Jonathan Stollberg (247775)}
+\submissiondate{\today}
+
+\maketitle
+\tableofcontents
+
+\chapter{Einführung}
+In dieser Hausübung ging es darum die Berechnung eines Matrix-Vektor-Produkts gemäß
+\begin{align*}
+	c_{i} = A_{ij}b_{j}
+\end{align*}
+in der Programmiersprache \textit{Java} zu implementieren. Dabei soll die Matrix $\mathbf{A}$ stets quadratisch sein, d.h. $\mathbf{A} \in \mathbb{R}^{m\times m}$ und $\mathbf{b} \in \mathbb{R}^{m}$. Die Implementierung wurde sequentiell und parallel umgesetzt, wobei darauf geachtet wurde, dass das Programm sowohl auf der CPU mittels Streams als auch auf der GPU mittels der Schnittstelle \textit{OpenCL} parallelisiert ist.
+
+Hier kommen ein paar Erklärungen zu OpenCL.
+
+Das Programm kann mittels der Kommandozeile mit zwei optionalen (und untrennbaren) Argumenten aufgerufen werden. Das erste Argument repräsentiert dabei die Problemgröße $m$, das zweite Argument legt die \textit{local size} fest, die der \textit{OpenCL} Kernel anfragt. Wird die Berechnung ganz ohne Argumente aufgerufen, so wird die Berechnung für verschiedene vordefinierte $m$ und \textit{local sizes} ausgeführt:
+\begin{lstlisting}[language=bash]
+  $ java -jar HighPerformanceSimulation.jar
+  $ java -jar HighPerformanceSimulation.jar 1000 10
+\end{lstlisting}
+
+Im Folgenden sollen nun wichtige Aspekte der Implementierung erläutert und anschließend die Performance der sequentiellen und parallelen Berechnungen für verschiedene $m$ analysiert und beurteilt werden.
+
+\chapter{Sequentieller Algorithmus}
+
+\chapter{Paralleler Algorithmus mittels OpenCL}
+
+\chapter{Ausführung auf dem Lichtenberg-Hochleistungsrechner}
+
+\chapter{Performanceanalyse}
+
+\chapter{Fazit}
+
+\end{document}
