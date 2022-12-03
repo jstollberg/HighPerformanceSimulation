@@ -112,7 +112,7 @@ Die getesteten Problemgrößen unterscheiden sich zu den in der Aufgabenstellung
 \end{lstlisting}
 Daher mussten wir auf bereits zuvor durchgeführte Tests zurückgreifen, was wir an dieser Stelle entschuldigen wollen.
 
-In Abb.~\ref{auto_lws} sind die Rechenzeit und der Speedup für die unterschiedlichen $m$ und eine von \textit{OpenCL} festgelegte \textit{local size} dargestellt. Es ist zu erkennen, dass die parallele Matrix-Vektor-Multiplikation insbesondere für sehr große $m$ mit wesentlich geringerem Zeitaufwand durchgeführt wird, als im sequentiellen Fall. Somit wird im Falle $m = 5200$ bereits ein Speedup $S_p \approx 38$ erreicht.
+In Abb.~\ref{auto_lws} sind die Rechenzeit und der Speedup für die unterschiedlichen $m$ und eine von \textit{OpenCL} festgelegte \textit{local size} dargestellt. Es ist zu erkennen, dass die parallele Matrix-Vektor-Multiplikation insbesondere für sehr große $m$ mit wesentlich geringerem Zeitaufwand durchgeführt wird, als im sequentiellen Fall. Somit wird im Falle $m = 5200$ bereits ein Speedup $S_p \approx 38$ erreicht. Dies ist darauf zurückzuführen, dass jede Zeile der Matrix $\mathbf{A}$ als eigenes \textit{Work Item} behandelt wird und somit mehrere Zeilen gleichzeitig abgewickelt werden können. Lediglich für sehr kleine $m$, wie in diesem Falle $m = 10$ wird das sequentielle Programm schneller ausgeführt, da der Overhead die ansonsten vorliegende Zeiteinsparung überwiegt.
 \begin{figure}[h!tb]
 	\centering
 	\subfigure[Rechenzeit.]{\includegraphics[width=14cm]{auto_lws.pdf}}\hspace{1cm}
