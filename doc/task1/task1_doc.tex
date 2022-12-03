@@ -38,9 +38,12 @@
 \usepackage{listings}
 \lstset{numbers=left, 
 		numberstyle=\tiny, 
-		numbersep=5pt, 
+		numbersep=10pt, 
+		frame=tlbr,
+		framesep=5pt,
 		backgroundcolor=\color{lightgray}, 
-		xleftmargin=10pt, 
+		xleftmargin=25pt, 
+		xrightmargin=5pt, 
 		showstringspaces=false, 
 		tabsize=4}
 \usepackage{epstopdf}
@@ -53,7 +56,7 @@
 \let\pck\textsf
 \let\cls\textsf
 \newcommand{\mr}[1]{\mathrm{#1}}
-\def\code#1{\texttt{#1}}
+\def\code#1{\begin{small}\texttt{#1}\end{small}}
 
 % start document
 \setlength\intextsep{22pt}
@@ -107,7 +110,7 @@ Zur Implementierung mit OpenCL waren einige Schritte zur Initialisierung nötig.
 \section{Funktion des Kernels}
 In \ref{kernel_source} ist der Source-Code des Kernels dargestellt.
 \begin{lstlisting}[language=c,label=kernel_source]
-	__kernel void matrix_vec(
+__kernel void matrix_vec(
 	__global const short *lhs, 
 	__global const short *rhs, 
 	__global short *result, 
@@ -117,7 +120,7 @@ In \ref{kernel_source} ist der Source-Code des Kernels dargestellt.
 		for(int i = 0; i < d; ++i) {
 			result[gid] += lhs[gid * size + i] * rhs[i];
 		}
-	};
+};
 \end{lstlisting}
 Mit der Instruktion \code{\_\_kernel} wird dem OPCL Compiler mitgeteilt, dass es sich um einen Einstiegspunkt handelt. Mit \code{\_\_global} markierte Argumente sind Strukturen aus dem globalen Speicher, welcher von allen Kernels angesprochen werden kann. Bei dem letzten Argument handelt es sich um die Gesamt-Größe der übergebenen (1D)-Arrays, da der Kernel keine andere Möglichkeit hat die übergebenen Matrix-Größen zu erfahren (die Pointer \code{*lhs}, \code{*rhs} und \code{*result} zeigen nur an den Anfang der entsprechenden Arrays).
 
@@ -159,7 +162,7 @@ Das übergeben der Kernels an die CommandQueue garantiert noch nicht, dass diese
 \subsection{Kernel-Ergebnisse auslesen}
 Ähnlich wie das kopieren vom Host-Speicher in den Ziel-Speicher müssen beim Lesen der Ergebnisse die Arrays vom Ziel-Speicher zurück in den Host-Speicher geladen werden. Dies geschieht mit \code{clEnqueueReadBuffer}.
 
-Durch das Anfordern des Ergebnis-Speichers werden die zuvor eingereihten Kernels ausgeführt. Dieses Verhalten ist zur Messung nicht vorteilhaft, da auch das Auslesen des Speichers eine gewisse Zeit in Anspruch nehmen kann. Die Ausführung der Kernels wird daher nach \code{clEnqueueNDRangeKernel} mit \code{clFinish(OpenCL.commandQueue)} forciert (\code{MatrixVector.parallel()}).
+Durch das Anfordern des Ergebnis-Speichers werden die zuvor eingereihten Kernels ausgeführt. Dieses Verhalten ist zur Messung nicht vorteilhaft, da auch das Auslesen des Speichers eine gewisse Zeit in Anspruch nehmen kann. Die Ausführung der Kernels wird daher nach \code{clEnqueueNDRangeKernel} mit \code{clFinish(OpenCL.commandQueue)} forciert (siehe \code{MatrixVector.parallel(..)}).
 
 \chapter{Performance-Analyse}
 Die Performance-Tests wurden auf dem Lichtenberg-Hochleistungsrechner der Technischen Universität Darmstadt durchgeführt. Zu diesem Zwecke wurde ein SLURM-Skript geschrieben, welches einen Rechenknoten mit einer GPU des Typs \textit{NVIDIA A100-PCIE-40GB} für die Parallelisierung sowie einer CPU und 30 GB Speicher anfordert. Damit wurden die Tests für $m \in \{10, 100, 500, 1000, 2000, 4000, 5200\}$ gerechnet. Die \textit{local\_work\_size} wurde dabei zunächst von \textit{OpenCL} selbst festgelegt, anschließend aber auch noch variiert. Um die Rechenzeit möglichst unverfälscht zu zu untersuchen, wurde der Warmup der \textit{OpenCL}-Parallelisierung in allen Messungen ignoriert.
