@@ -102,6 +102,65 @@ Selbstverständlich muss der Code noch in eine Klassenstruktur bzw. eine Methode
 
 \chapter{Paralleler Algorithmus mittels OpenCL}
 
+Zur Implementierung mit OpenCL waren einige Schritte zur Initialisierung nötig. Die Verwendete Java OpenCL Library (JOCL) ist ein Low-Level-API Wrapper. Es waren also mehrere aufwendige OpenCL-Calls nötig, um die gewünschte Funktionalität zu erreichen. Die Implementierung des Kernels erfolgte in einer C99-Notation, welche für den OpenCL Compiler vorgegeben war.
+
+\section{Funktion des Kernels}
+In \ref{kernel_source} ist der Source-Code des Kernels dargestellt.
+\begin{lstlisting}[language=c,label=kernel_source]
+	__kernel void matrix_vec(
+	__global const short *lhs, 
+	__global const short *rhs, 
+	__global short *result, 
+	const int d) {
+		int gid = get_global_id(0);
+		result[gid] = 0;		
+		for(int i = 0; i < d; ++i) {
+			result[gid] += lhs[gid * size + i] * rhs[i];
+		}
+	};
+\end{lstlisting}
+Mit der Instruktion \code{\_\_kernel} wird dem OPCL Compiler mitgeteilt, dass es sich um einen Einstiegspunkt handelt. Mit \code{\_\_global} markierte Argumente sind Strukturen aus dem globalen Speicher, welcher von allen Kernels angesprochen werden kann. Bei dem letzten Argument handelt es sich um die Gesamt-Größe der übergebenen (1D)-Arrays, da der Kernel keine andere Möglichkeit hat die übergebenen Matrix-Größen zu erfahren (die Pointer \code{*lhs}, \code{*rhs} und \code{*result} zeigen nur an den Anfang der entsprechenden Arrays).
+
+Jedes Work-Item (1 Work-Item = 1 Kernel-Ausführung) erhält vom Host (JOCL) eine eindeutige ID. Diese erhält man mit \code{get\_global\_id}. Das Argument 0 definiert dabei die x-Richtung, da globale IDs auch mehrdimensional aufgereiht sein können. Mithilfe dieser ID wird eine Matrix-Zeile mit der Right-Hand-Side (rhs, dem Vektor) multipliziert. Das Ergebnis wird an der entsprechenden Stelle im Ergebnis-Array gespeichert. Mit anderen Worten: Die Matrix-Vektor-Multiplikation wird Zeilenweise in Kernels übergeben.
+
+\section{Ablauf der Initialisierung}
+Der Ablauf der Initialisierung verläuft wie folgt:
+\begin{enumerate}
+	\item Erhalte Anzahl an Plattformen
+	\item Erhalte spezifische Plattform-IDs
+	\item Verwende 1. gefundene Plattform
+	\item Erhalte Anzahl an Devices auf Plattform
+	\item Verwende 1. gefundenes Device
+	\item Context für das Device erstellen
+	\item CommandQueue für das Device erstellen	
+\end{enumerate}
+
+\subsection{Context und CommandQueue}
+Mit dem so generierten Context und der CommandQueue können dann jegliche weiteren Befehle ausgeführt werden. Der Context liefert dabei nötige infrastrukturelle Methoden und die CommandQueue dient der Kommunikation mit dem zugrundeliegenden Device. Im Regelfall sollten diese Objekte nach ihrer Verwendung verworfen und so für die Garbage Collection (GC) freigegeben werden. In diesem Fall wird die Referenz auf diese Objekte in der Klasse \code{OpenCL} gespeichert, um bei mehrfachem Aufruf erneute Instanzierungen zu vermeiden.
+
+\subsection{Kernel-Kompilierung}
+Um Code an die Grafik-Karte oder andere Compute Units (CU) zu übergeben, bedarf es noch weiterer Arbeit. Zunächst muss ein sogenanntes Programm erzeugt werden (\code{clCreateProgramWithSource}). Dazu verwendet man einen in C99 verfassten Sourcecode, welcher durch OpenCL unterhalb von JOCL kompiliert wird (\code{clBuildProgram}). Das ausführbare Programm muss dann noch in einen Kernel überführt werden (\code{clCreateKernel}). Der Kernel wird letztlich von JOCL auf die CU übertragen und kann dann ausgeführt werden. Wie die Referenzen aus dem vorigen Absatz wird auch der Kernel nicht verworfen.
+
+\subsection{Speicher}
+Da sich Grafikkarte und CPU keinen Speicher teilen, müssen sogenannte Buffer implementiert werden, die Speicherzugriffe zwischen den beiden dedizierten Speichern koordinieren. Siehe dazu \code{MatrixVector.initParallel(long lws, int availableUnits)}.
+
+Um die zugrundeliegende Struktur in den globalen Speicher der Grafikkarte zu kopieren, werden Buffer erstellt, die den Inhalt des Host-Speichers (für den CPU verfügbarer Speicher) kopieren.
+
+\subsection{Kernel-Argumente}
+Um dem Host mitzuteilen, welche Argumente an die Kernel übergeben werden sollen, müssen diese noch mit \code{clSetKernelArg(...)} definiert werden. Hier ist darauf zu achten, dass die korrekten Objekt-Typen angegeben werden, da es sonst zu Memory-Leaks oder Schreiben in geschütztem Speicher kommt.
+
+\subsection{Starten der Kernel}
+Hat man die Initialisierung abgeschlossen, folgt das Starten der Kernels. Dazu wird eine globale und eine lokale Work-Size definiert. \textit{Global} bedeutet hierbei den vollständigen Umfang der Work-Items (in diesem Fall die Menge an Zeilen in der Matrix) und \textit{lokal} die Anzahl an gleichzeitig ausgeführten Work-Items (Kernel) innerhalb einer Work-Group. Aufgrund der Architektur von Grafikkarten (zumindest von Nvidia) ist es ratsam, die Local-Work-Size(LWS) entsprechend der sogenannten Warp-Size zu definieren. Während Work-Groups auf sogenannten Threads ausgeführt werden, werden die beinhalteten Work-Items dann nochmal auf einzelne CU verteilt. Die Anzahl der so verteilten Work-Items nennt man WarpSize. Bei häuslichen Tests auf einer GTX 1060 mit einer Warp-Size von 32 erhält man eine LWS von ebenjenen 32. Bei kleineren LWS als 32 bleiben Rechenkapazitäten der GPU unbenutzt.
+
+Die Kernels werden zuletzt mit \code{clEnqueueNDRangeKernel} an die CommandQueue übergeben. Hierbei werden die globalen und lokalen Arbeitsgrößen übergeben und der Host übernimmt die Verteilung.
+
+Das übergeben der Kernels an die CommandQueue garantiert noch nicht, dass diese auch ausgeführt werden. Da der Host durch die übergebenen Kernel-Argumente weiß, welches Argument die Ausgabe des Kernels ist, kann er mit der Ausführung der Kernels warten, bis dieser angefordert wird.
+
+\subsection{Kernel-Ergebnisse auslesen}
+Ähnlich wie das kopieren vom Host-Speicher in den Ziel-Speicher müssen beim Lesen der Ergebnisse die Arrays vom Ziel-Speicher zurück in den Host-Speicher geladen werden. Dies geschieht mit \code{clEnqueueReadBuffer}.
+
+Durch das Anfordern des Ergebnis-Speichers werden die zuvor eingereihten Kernels ausgeführt. Dieses Verhalten ist zur Messung nicht vorteilhaft, da auch das Auslesen des Speichers eine gewisse Zeit in Anspruch nehmen kann. Die Ausführung der Kernels wird daher nach \code{clEnqueueNDRangeKernel} mit \code{clFinish(OpenCL.commandQueue)} forciert (\code{MatrixVector.parallel()}).
+
 \chapter{Performance-Analyse}
 Die Performance-Tests wurden auf dem Lichtenberg-Hochleistungsrechner der Technischen Universität Darmstadt durchgeführt. Zu diesem Zwecke wurde ein SLURM-Skript geschrieben, welches einen Rechenknoten mit einer GPU des Typs \textit{NVIDIA A100-PCIE-40GB} für die Parallelisierung sowie einer CPU und 30 GB Speicher anfordert. Damit wurden die Tests für $m \in \{10, 100, 500, 1000, 2000, 4000, 5200\}$ gerechnet. Die \textit{local\_work\_size} wurde dabei zunächst von \textit{OpenCL} selbst festgelegt, anschließend aber auch noch variiert. Um die Rechenzeit möglichst unverfälscht zu zu untersuchen, wurde der Warmup der \textit{OpenCL}-Parallelisierung in allen Messungen ignoriert.
 
