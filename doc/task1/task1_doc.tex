@@ -107,7 +107,7 @@ Selbstverständlich muss der Code noch in eine Klassenstruktur bzw. eine Methode
 
 Zur Implementierung mit \textit{OpenCL }waren einige Schritte zur Initialisierung nötig. Die Verwendete \textit{Java OpenCL} Library (\textit{JOCL}) ist ein Low-Level-API Wrapper. Es waren also mehrere aufwendige OpenCL-Calls nötig, um die gewünschte Funktionalität zu erreichen. Die Implementierung des Kernels erfolgte in einer \textit{C99}-Notation, welche für den \textit{OpenCL} Compiler vorgegeben war.
 
-\section{Funktion des Kernels}
+\section*{Funktion des Kernels}
 Folgend ist der Source-Code des Kernels dargestellt:
 \begin{lstlisting}[language=c,label=kernel_source]
 __kernel void matrix_vec(
@@ -126,7 +126,7 @@ Mit der Instruktion \code{\_\_kernel} wird dem \textit{OPCL} Compiler mitgeteilt
 
 Jedes Work-Item (1 Work-Item = 1 Kernel-Ausführung) erhält vom Host (\textit{JOCL}) eine eindeutige ID. Diese erhält man mit \code{get\_global\_id}. Das Argument \code{0} definiert dabei die x-Richtung, da globale IDs auch mehrdimensional aufgereiht sein können. Mithilfe dieser ID wird eine Matrix-Zeile mit der Right-Hand-Side (\code{rhs}, dem Vektor) multipliziert. Das Ergebnis wird an der entsprechenden Stelle im Ergebnis-Array gespeichert. Mit anderen Worten: Die Matrix-Vektor-Multiplikation wird Zeilenweise in Kernels übergeben.
 
-\section{Ablauf der Initialisierung}
+\section*{Ablauf der Initialisierung}
 Der Ablauf der Initialisierung verläuft wie folgt:
 \begin{enumerate}
 	\item Erhalte Anzahl an Plattformen
