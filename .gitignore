@@ -2,3 +2,11 @@
 *.iml
 /out
 samples/**/*
+arara.log
+*.xmpi
+*.aux
+*.log
+*.out
+*.synctex.gz
+*.toc
+*.xmpdata
