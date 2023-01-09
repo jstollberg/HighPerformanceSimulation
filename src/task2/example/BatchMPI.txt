@@ -1,0 +1,27 @@
+#!/bin/bash
+#SBATCH -J MPIHelloWorld
+#SBATCH -A kurs00060
+#SBATCH -p kurs00060
+#SBATCH --reservation=kurs00060
+##SBATCH --mail-type=ALL
+##SBATCH --mail-user=vorname.nachname@stud.tu-darmstadt.de
+#SBATCH -e /home/<TUID>/<Projekt_Name>/<Job_Name>.err.%j
+#SBATCH -o /home/<TUID>/<Projekt_Name>/<Job_Name>.out.%j
+#SBATCH --mem-per-cpu=1000
+#SBATCH --time=00:30
+#SBATCH -n 1
+#SBATCH -c 1
+
+ # first remove all modules and load required modules
+module purge
+module load intel/2020.1
+module load java/14.0.1
+module load intel/mpi
+
+
+ # set MPJ_HOME
+export MPJ_HOME=/home/mh30dyro/pathTo/mpj-v0_44
+export PATH=$MPJ_HOME/bin:$PATH
+
+ # call to the parallel program
+srun mpjrun.sh -np 8  HelloWorldMPI.jar
